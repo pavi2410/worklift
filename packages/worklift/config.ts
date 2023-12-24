@@ -7,6 +7,8 @@ interface WorkliftConfig {
 
 export interface TaskDef {
     command: string | string[];
+    command__windows: string | string[];
+
     depends_on?: string[];
 }
 

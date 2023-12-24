@@ -12,7 +12,7 @@ const executionKeeper = new Map<string, boolean>()
 
 export async function runTask(task: Task, ctx: WorkliftContext): Promise<void> {
     if (executionKeeper.get(task.name)) {
-        console.log('[Skip]', task.name)
+        console.log('[Skip]', task.name, '\n')
         return
     }
 
@@ -20,10 +20,15 @@ export async function runTask(task: Task, ctx: WorkliftContext): Promise<void> {
         await runTask({ name: dep, ...ctx.tasks[dep] }, ctx)
     }
 
-    const cmd = Array.isArray(task.command) ? task.command : task.command.split(' ')
-
     console.log('[Exec]', task.command)
     console.time(task.name)
+
+    const taskCommand = process.platform === 'win32' ? task.command__windows : task.command
+    const cmd = Array.isArray(taskCommand) ? taskCommand : (
+        process.platform === 'win32' ?
+            ['powershell', '-command', taskCommand] :
+            ['bash', '-c', taskCommand]
+    )
 
     const proc = Bun.spawn(cmd, {
         stdout: 'inherit',
@@ -31,6 +36,11 @@ export async function runTask(task: Task, ctx: WorkliftContext): Promise<void> {
     })
 
     await proc.exited
+
+    if (proc.exitCode !== 0) {
+        console.error(`Task ${task.name} failed with exit code ${proc.exitCode}`)
+        return process.exit()
+    }
 
     console.timeEnd(task.name)
     console.log()
