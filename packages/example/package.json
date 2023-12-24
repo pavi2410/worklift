@@ -3,13 +3,38 @@
   "private": true,
   "worklift": {
     "tasks": {
-      "lint": "echo linting",
-      "build": "echo building",
-      "test": "echo testing",
-      "deploy": "echo deploying",
-      "clean": "echo cleaning",
-      "run": "echo running",
-      "default": "__all__"
+      "lint": {
+        "command": "echo linting"
+      },
+      "build": {
+        "command": "echo building",
+        "depends_on": [
+          "lint"
+        ]
+      },
+      "test": {
+        "command": "echo testing",
+        "depends_on": [
+          "build"
+        ]
+      },
+      "deploy": {
+        "command": "echo deploying",
+        "depends_on": [
+          "build",
+          "test"
+        ]
+      },
+      "clean": {
+        "command": "echo cleaning"
+      },
+      "run": {
+        "command": "echo running",
+        "depends_on": [
+          "build",
+          "test"
+        ]
+      }
     }
   },
   "devDependencies": {

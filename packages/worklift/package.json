@@ -6,5 +6,8 @@
   "bin": "./worklift.js",
   "dependencies": {
     "commander": "^11.1.0"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.0.0"
   }
 }
