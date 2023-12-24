@@ -27,13 +27,6 @@
       },
       "clean": {
         "command": "echo cleaning"
-      },
-      "run": {
-        "command": "echo running",
-        "depends_on": [
-          "build",
-          "test"
-        ]
       }
     }
   },

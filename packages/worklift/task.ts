@@ -1,32 +1,25 @@
-interface Task {
+import type { TaskDef } from './config'
+
+interface Task extends TaskDef {
     name: string;
-    command: string | string[];
-    depends_on?: string[];
 }
 
-function getTasks(): Task[] {
-
+interface WorkliftContext {
+    tasks: Record<string, TaskDef>;
 }
 
-function buildTree(tasks: Task[]): void {
-    const tree = new Map<string, Task>()
+const executionKeeper = new Map<string, boolean>()
 
-    for (const task of tasks) {
-        tree.set(task.name, task)
+export async function runTask(task: Task, ctx: WorkliftContext): Promise<void> {
+    if (executionKeeper.get(task.name)) {
+        console.log('[Skip]', task.name)
+        return
     }
 
-    for (const task of tasks) {
-        if (task.depends_on) {
-            for (const dependency of task.depends_on) {
-                if (!tree.has(dependency)) {
-                    throw new Error(`Task ${task.name} depends on ${dependency} but it does not exist`)
-                }
-            }
-        }
+    for (const dep of task.depends_on ?? []) {
+        await runTask({ name: dep, ...ctx.tasks[dep] }, ctx)
     }
-}
 
-export async function runTask(task: Task): Promise<void> {
     const cmd = Array.isArray(task.command) ? task.command : task.command.split(' ')
 
     console.log('[Exec]', task.command)
@@ -40,4 +33,7 @@ export async function runTask(task: Task): Promise<void> {
     await proc.exited
 
     console.timeEnd(task.name)
+    console.log()
+
+    executionKeeper.set(task.name, true)
 }

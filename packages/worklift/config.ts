@@ -2,14 +2,12 @@ import { resolve } from "node:path"
 import process from "node:process"
 
 interface WorkliftConfig {
-    tasks: Record<string, {
-        command: string | string[];
-        depends_on?: string[];
-    }>;
+    tasks: Record<string, TaskDef>;
 }
 
-interface TaskDef {
-    
+export interface TaskDef {
+    command: string | string[];
+    depends_on?: string[];
 }
 
 export async function readConfig(): Promise<WorkliftConfig> {

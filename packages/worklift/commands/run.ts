@@ -6,7 +6,10 @@ export default async function (taskName: string) {
 
     const task = tasks[taskName]
 
-    console.log('[Task]', taskName)
+    console.log('[Task]', taskName, '\n')
 
-    await runTask({ name: taskName, ...task })
+    console.time('Finished')
+    await runTask({ name: taskName, ...task }, { tasks })
+    console.log('\nSuccess!')
+    console.timeEnd('Finished')
 }
