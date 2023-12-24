@@ -1,0 +1,25 @@
+{
+  "name": "example",
+  "version": "1.0.0",
+  "worklift": {
+    "tasks": {
+      "lint": "echo linting",
+      "build": "echo building",
+      "test": "echo testing",
+      "deploy": "echo deploying",
+      "clean": "echo cleaning",
+      "run": "echo running",
+      "all": [
+        "clean",
+        "lint",
+        "build",
+        "test",
+        "deploy",
+        "run"
+      ]
+    }
+  },
+  "devDependencies": {
+    "worklift": "file:.."
+  }
+}
