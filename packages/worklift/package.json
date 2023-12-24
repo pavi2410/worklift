@@ -1,0 +1,10 @@
+{
+  "name": "worklift",
+  "description": "Worklift is a tool for managing the scripts in your project.",
+  "version": "1.0.0",
+  "type": "module",
+  "bin": "./worklift.js",
+  "dependencies": {
+    "commander": "^11.1.0"
+  }
+}

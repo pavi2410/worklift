@@ -7,8 +7,8 @@ import { Command } from 'commander';
 const program = new Command();
 
 const path = resolve(process.cwd(), "package.json")
-const file = (await fs.readFile(path)).toString();
-const packageJson = JSON.parse(file)
+console.log('looking for package.json at', path)
+const packageJson = await Bun.file(path).json()
 let {tasks} = packageJson.worklift;
 
 program
@@ -22,11 +22,20 @@ program
 
 program
     .command("run", { isDefault: true })
-    .argument("<task>", "Task to run")
+    .argument("[task]", "Task to run", "default")
     .action((task) => {
         // run shell command
-        const {command} = tasks[task]
-        console.log(`Running ${command}`)
+        const command = tasks[task] ?? "__all__"
+
+        if (command === "__all__") {
+          for (const task in tasks) {
+            if (task === "default") continue
+            console.log(`Running ${task} ${tasks[task]}`)
+          }
+          return
+        }
+
+        console.log(`Running ${task} ${command}`)
 
     });
 

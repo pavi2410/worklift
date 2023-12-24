@@ -1,6 +1,6 @@
 {
   "name": "example",
-  "version": "1.0.0",
+  "private": true,
   "worklift": {
     "tasks": {
       "lint": "echo linting",
@@ -9,17 +9,10 @@
       "deploy": "echo deploying",
       "clean": "echo cleaning",
       "run": "echo running",
-      "all": [
-        "clean",
-        "lint",
-        "build",
-        "test",
-        "deploy",
-        "run"
-      ]
+      "default": "__all__"
     }
   },
   "devDependencies": {
-    "worklift": "file:.."
+    "worklift": "workspace:*"
   }
 }
