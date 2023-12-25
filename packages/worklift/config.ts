@@ -10,6 +10,9 @@ export interface TaskDef {
     command__windows: string | string[];
 
     depends_on?: string[];
+
+    input?: string[];
+    output?: string[];
 }
 
 export async function readConfig(): Promise<WorkliftConfig> {

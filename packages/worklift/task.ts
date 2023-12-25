@@ -1,4 +1,6 @@
 import type { TaskDef } from './config'
+import fs from 'node:fs/promises'
+import { Glob } from "bun";
 
 interface Task extends TaskDef {
     name: string;
@@ -46,4 +48,32 @@ export async function runTask(task: Task, ctx: WorkliftContext): Promise<void> {
     console.log()
 
     executionKeeper.set(task.name, true)
+}
+
+export async function cleanTask(ctx: WorkliftContext) {
+    const { tasks } = ctx
+
+    let cleanCounter = 0;
+
+    for (const taskName in tasks) {
+        console.log('[Clean]', taskName)
+        const task = tasks[taskName]
+        if (task.output) {
+            for (const output of task.output) {
+                const glob = new Glob(output);
+
+                for await (const file of glob.scan({ dot: true })) {
+                    console.log(file);
+                    await fs.unlink(file);
+                    cleanCounter++;
+                }
+            }
+        }
+    }
+
+    if (cleanCounter == 0) {
+        console.log('\nNothing to clean.')
+    } else {
+        console.log(`\nCleaned ${cleanCounter} files.`)
+    }
 }

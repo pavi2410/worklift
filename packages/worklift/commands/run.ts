@@ -1,8 +1,17 @@
 import { readConfig } from '../config'
-import { runTask } from '../task'
+import { cleanTask, runTask } from '../task'
 
 export default async function (taskName: string) {
     const { tasks } = await readConfig()
+
+    if (taskName === 'clean') {
+        if (tasks.clean) {
+            console.warn('Task "clean" is overidden.')
+        } else {
+            await cleanTask({ tasks })
+            return
+        }
+    }
 
     const task = tasks[taskName]
 

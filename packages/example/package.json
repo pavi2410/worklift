@@ -4,29 +4,42 @@
   "worklift": {
     "tasks": {
       "lint": {
-        "command": "echo linting"
+        "command": "echo linting",
+        "input": [
+          "main.js"
+        ]
       },
       "build": {
-        "command": "echo building",
+        "command": "bun build main.js --compile",
         "depends_on": [
           "lint"
+        ],
+        "input": [
+          "main.js"
+        ],
+        "output": [
+          "main",
+          "*.bun-build"
         ]
       },
       "test": {
-        "command": "echo testing",
+        "command": "test -e main && echo test passed || echo test failed",
         "depends_on": [
           "build"
+        ],
+        "input": [
+          "main"
         ]
       },
       "deploy": {
-        "command": "echo deploying",
+        "command": "./main",
         "depends_on": [
           "build",
           "test"
+        ],
+        "input": [
+          "main"
         ]
-      },
-      "clean": {
-        "command": "echo cleaning"
       }
     }
   },
