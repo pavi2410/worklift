@@ -33,7 +33,7 @@ describe("File Tasks", () => {
 
     test("validates from parameter is required", () => {
       const task = new CopyTask();
-      expect(() => task.validate()).toThrow("CopyTask: 'from' is required");
+      expect(() => task.validate()).toThrow("CopyTask: 'from' or 'files' is required");
     });
 
     test("validates to parameter is required", () => {

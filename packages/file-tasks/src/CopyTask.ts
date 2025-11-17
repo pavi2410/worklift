@@ -3,12 +3,14 @@ import { cp, mkdir, copyFile } from "fs/promises";
 import { basename, relative, join, dirname } from "path";
 import { glob } from "glob";
 import { minimatch } from "minimatch";
+import { FileSet } from "./FileSet.ts";
 
 /**
  * Task for copying files or directories
  */
 export class CopyTask extends Task {
   private fromPath?: string;
+  private fileSet?: FileSet;
   private toPath?: string;
   private recursiveFlag = true;
   private forceFlag = true;
@@ -25,6 +27,12 @@ export class CopyTask extends Task {
     const task = new CopyTask();
     task.fromPath = path;
     task.inputs = path;
+    return task;
+  }
+
+  static files(fileSet: FileSet): CopyTask {
+    const task = new CopyTask();
+    task.fileSet = fileSet;
     return task;
   }
 
@@ -66,8 +74,8 @@ export class CopyTask extends Task {
   }
 
   validate() {
-    if (!this.fromPath) {
-      throw new Error("CopyTask: 'from' is required");
+    if (!this.fromPath && !this.fileSet) {
+      throw new Error("CopyTask: 'from' or 'files' is required");
     }
     if (!this.toPath) {
       throw new Error("CopyTask: 'to' is required");
@@ -75,22 +83,27 @@ export class CopyTask extends Task {
   }
 
   async execute() {
-    console.log(`  ↳ Copying ${this.fromPath} to ${this.toPath}`);
-
-    if (this.renamePattern) {
-      // Need to rename files during copy
-      await this.copyWithRename();
-    } else if (this.flattenFlag) {
-      await this.copyFlattened();
-    } else if (this.includePatterns.length === 0 && this.excludePatterns.length === 0) {
-      // Fast path: no filtering needed
-      await cp(this.fromPath!, this.toPath!, {
-        recursive: this.recursiveFlag,
-        force: this.forceFlag,
-      });
+    if (this.fileSet) {
+      console.log(`  ↳ Copying files from FileSet to ${this.toPath}`);
+      await this.copyFromFileSet();
     } else {
-      // Need to filter files based on include/exclude patterns
-      await this.copyWithFilters();
+      console.log(`  ↳ Copying ${this.fromPath} to ${this.toPath}`);
+
+      if (this.renamePattern) {
+        // Need to rename files during copy
+        await this.copyWithRename();
+      } else if (this.flattenFlag) {
+        await this.copyFlattened();
+      } else if (this.includePatterns.length === 0 && this.excludePatterns.length === 0) {
+        // Fast path: no filtering needed
+        await cp(this.fromPath!, this.toPath!, {
+          recursive: this.recursiveFlag,
+          force: this.forceFlag,
+        });
+      } else {
+        // Need to filter files based on include/exclude patterns
+        await this.copyWithFilters();
+      }
     }
   }
 
@@ -216,5 +229,18 @@ export class CopyTask extends Task {
       minimatch(relativePath, pattern)
     );
     return !matchesExclude;
+  }
+
+  private async copyFromFileSet() {
+    const files = await this.fileSet!.resolve();
+    const baseDir = this.fileSet!.getBaseDir();
+
+    for (const file of files) {
+      const relativePath = relative(baseDir, file);
+      const destPath = join(this.toPath!, relativePath);
+
+      await mkdir(dirname(destPath), { recursive: true });
+      await copyFile(file, destPath);
+    }
   }
 }
