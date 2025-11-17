@@ -10,7 +10,11 @@ Worklift allows you to define build processes using TypeScript instead of XML. I
 
 - **TypeScript DSL**: Write your build scripts in TypeScript with full type safety
 - **Incremental Builds**: Tasks track inputs/outputs to avoid unnecessary work
-- **Dependency Management**: Targets can depend on other targets
+- **Comprehensive Dependency Management**:
+  - Targets can depend on other targets within the same project
+  - Projects can depend on other projects
+  - Targets can depend on specific targets in other projects
+  - Automatic cyclic dependency detection
 - **Extensible**: Easy to add custom tasks and language-specific modules
 - **Built-in Tasks**: Common operations (copy, delete, mkdir, exec) and Java support (javac, jar, java)
 
@@ -63,8 +67,20 @@ project("app", (p) => {
 A project is the top-level container for your build:
 
 ```typescript
-project("my-app", (p) => {
+const myApp = project("my-app", (p) => {
   // Define targets here
+});
+```
+
+Projects can depend on other projects:
+
+```typescript
+const lib = project("lib", (p) => {
+  p.target("build", () => { /* ... */ });
+});
+
+const app = project("app", (p) => {
+  p.dependsOn(lib); // app depends on lib
 });
 ```
 
@@ -77,11 +93,23 @@ p.target("compile", () => {
   // Tasks go here
 });
 
-// Target with dependencies
+// Target with local dependencies
 p.target("package", ["compile"], () => {
   // This runs after 'compile'
 });
+
+// Target with cross-project dependencies
+p.target("build", ["compile", [otherProject, "test"]], () => {
+  // This runs after 'compile' and 'otherProject:test'
+});
 ```
+
+**Dependency Types:**
+- `"targetName"` - Depend on a target in the same project
+- `otherProject` - Depend on another project
+- `[otherProject, "targetName"]` - Depend on a specific target in another project
+
+See [DEPENDENCIES.md](DEPENDENCIES.md) for detailed documentation.
 
 ### Tasks
 

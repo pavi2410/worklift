@@ -1,5 +1,5 @@
-import type { Project, Target } from "./types.ts";
-import { setCurrentProject, setCurrentTarget } from "./types.ts";
+import type { Project, Target, Dependency } from "./types.ts";
+import { setCurrentProject, setCurrentTarget, projects } from "./types.ts";
 import { TargetImpl } from "./target.ts";
 
 /**
@@ -7,17 +7,27 @@ import { TargetImpl } from "./target.ts";
  */
 export class ProjectImpl implements Project {
   name: string;
+  dependencies: Project[] = [];
   targets = new Map<string, Target>();
 
   constructor(name: string) {
     this.name = name;
+    // Register this project in the global registry
+    projects.set(name, this);
+  }
+
+  /**
+   * Add project dependencies
+   */
+  dependsOn(...deps: Project[]): void {
+    this.dependencies.push(...deps);
   }
 
   /**
    * Define a new target
    */
-  target(name: string, fnOrDeps: string[] | (() => void), maybeFn?: () => void): void {
-    let dependencies: string[] = [];
+  target(name: string, fnOrDeps: Dependency[] | (() => void), maybeFn?: () => void): void {
+    let dependencies: Dependency[] = [];
     let fn: () => void;
 
     if (typeof fnOrDeps === "function") {
@@ -48,33 +58,127 @@ export class ProjectImpl implements Project {
       throw new Error(`Target "${targetName}" not found in project "${this.name}"`);
     }
 
-    const executed = new Set<string>();
-    await this.executeTargetWithDeps(target, executed);
+    const executedTargets = new Set<string>();
+    const executedProjects = new Set<string>();
+    const inProgress = new Set<string>();
+
+    // Execute project-level dependencies first
+    for (const depProject of this.dependencies) {
+      await this.executeProjectDeps(depProject, executedProjects, inProgress);
+    }
+
+    await this.executeTargetWithDeps(target, executedTargets, executedProjects, inProgress);
+  }
+
+  /**
+   * Execute project dependencies recursively
+   */
+  private async executeProjectDeps(
+    project: Project,
+    executedProjects: Set<string>,
+    inProgress: Set<string>
+  ): Promise<void> {
+    const projectKey = project.name;
+
+    // Check for cyclic dependencies
+    if (inProgress.has(projectKey)) {
+      throw new Error(`Cyclic project dependency detected: ${projectKey}`);
+    }
+
+    // Skip if already executed
+    if (executedProjects.has(projectKey)) {
+      return;
+    }
+
+    inProgress.add(projectKey);
+
+    // Execute this project's dependencies first
+    for (const depProject of project.dependencies) {
+      await this.executeProjectDeps(depProject, executedProjects, inProgress);
+    }
+
+    inProgress.delete(projectKey);
+    executedProjects.add(projectKey);
   }
 
   /**
    * Execute a target and its dependencies recursively
    */
-  private async executeTargetWithDeps(target: Target, executed: Set<string>): Promise<void> {
+  private async executeTargetWithDeps(
+    target: Target,
+    executedTargets: Set<string>,
+    executedProjects: Set<string>,
+    inProgress: Set<string>
+  ): Promise<void> {
+    const targetKey = `${this.name}:${target.name}`;
+
+    // Check for cyclic dependencies
+    if (inProgress.has(targetKey)) {
+      throw new Error(`Cyclic target dependency detected: ${targetKey}`);
+    }
+
     // Skip if already executed
-    if (executed.has(target.name)) {
+    if (executedTargets.has(targetKey)) {
       return;
     }
 
+    inProgress.add(targetKey);
+
     // Execute dependencies first
-    for (const depName of target.dependencies) {
-      const dep = this.targets.get(depName);
-      if (!dep) {
-        throw new Error(
-          `Dependency "${depName}" not found for target "${target.name}" in project "${this.name}"`
-        );
-      }
-      await this.executeTargetWithDeps(dep, executed);
+    for (const dep of target.dependencies) {
+      await this.executeDependency(dep, executedTargets, executedProjects, inProgress);
     }
 
     // Execute this target
     await target.execute();
-    executed.add(target.name);
+    executedTargets.add(targetKey);
+    inProgress.delete(targetKey);
+  }
+
+  /**
+   * Execute a single dependency (can be string, Project, or [Project, string])
+   */
+  private async executeDependency(
+    dep: Dependency,
+    executedTargets: Set<string>,
+    executedProjects: Set<string>,
+    inProgress: Set<string>
+  ): Promise<void> {
+    if (typeof dep === "string") {
+      // Local target dependency
+      const target = this.targets.get(dep);
+      if (!target) {
+        throw new Error(
+          `Dependency "${dep}" not found in project "${this.name}"`
+        );
+      }
+      await this.executeTargetWithDeps(target, executedTargets, executedProjects, inProgress);
+    } else if (Array.isArray(dep)) {
+      // [Project, targetName] dependency
+      const [depProject, targetName] = dep;
+
+      // Execute the project's dependencies first
+      await this.executeProjectDeps(depProject, executedProjects, inProgress);
+
+      // Then execute the specific target
+      const target = depProject.targets.get(targetName);
+      if (!target) {
+        throw new Error(
+          `Target "${targetName}" not found in project "${depProject.name}"`
+        );
+      }
+
+      const targetKey = `${depProject.name}:${targetName}`;
+      if (!executedTargets.has(targetKey)) {
+        // Execute dependencies of that target in the context of the dependency project
+        if (depProject instanceof ProjectImpl) {
+          await depProject.executeTargetWithDeps(target, executedTargets, executedProjects, inProgress);
+        }
+      }
+    } else {
+      // Project dependency
+      await this.executeProjectDeps(dep, executedProjects, inProgress);
+    }
   }
 }
 

@@ -1,14 +1,14 @@
-import type { Target, TaskFn } from "./types.ts";
+import type { Target, TaskFn, Dependency } from "./types.ts";
 
 /**
  * Implementation of a build target
  */
 export class TargetImpl implements Target {
   name: string;
-  dependencies: string[];
+  dependencies: Dependency[];
   tasks: TaskFn[] = [];
 
-  constructor(name: string, dependencies: string[] = []) {
+  constructor(name: string, dependencies: Dependency[] = []) {
     this.name = name;
     this.dependencies = dependencies;
   }

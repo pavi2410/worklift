@@ -30,13 +30,21 @@ export interface TaskResult {
 }
 
 /**
+ * Dependency types:
+ * - string: Target name within the same project
+ * - Project: Depend on another project (executes all its dependencies and default target if any)
+ * - [Project, string]: Depend on a specific target in another project
+ */
+export type Dependency = string | Project | [Project, string];
+
+/**
  * A target contains a set of tasks to execute
  */
 export interface Target {
   /** Target name */
   name: string;
-  /** Dependencies on other targets */
-  dependencies: string[];
+  /** Dependencies on other targets, projects, or project:target combinations */
+  dependencies: Dependency[];
   /** Tasks to execute for this target */
   tasks: TaskFn[];
   /** Execute the target */
@@ -49,14 +57,18 @@ export interface Target {
 export interface Project {
   /** Project name */
   name: string;
+  /** Dependencies on other projects */
+  dependencies: Project[];
   /** Targets in this project */
   targets: Map<string, Target>;
   /** Define a new target */
   target(name: string, fn: () => void): void;
   /** Define a new target with dependencies */
-  target(name: string, dependencies: string[], fn: () => void): void;
+  target(name: string, dependencies: Dependency[], fn: () => void): void;
   /** Execute a target by name */
   execute(targetName: string): Promise<void>;
+  /** Add a project dependency */
+  dependsOn(...projects: Project[]): void;
 }
 
 /**
