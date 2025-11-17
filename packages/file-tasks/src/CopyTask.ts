@@ -1,7 +1,7 @@
 import { Task } from "@worklift/core";
-import { cp } from "fs/promises";
+import { cp, mkdir, copyFile } from "fs/promises";
+import { basename, relative, join, dirname } from "path";
 import { glob } from "glob";
-import { relative, join, dirname } from "path";
 import { minimatch } from "minimatch";
 
 /**
@@ -12,6 +12,7 @@ export class CopyTask extends Task {
   private toPath?: string;
   private recursiveFlag = true;
   private forceFlag = true;
+  private flattenFlag = false;
   private includePatterns: string[] = [];
   private excludePatterns: string[] = [];
 
@@ -41,6 +42,11 @@ export class CopyTask extends Task {
     return this;
   }
 
+  flatten(value: boolean): this {
+    this.flattenFlag = value;
+    return this;
+  }
+
   include(...patterns: string[]): this {
     this.includePatterns.push(...patterns);
     return this;
@@ -63,7 +69,9 @@ export class CopyTask extends Task {
   async execute() {
     console.log(`  ↳ Copying ${this.fromPath} to ${this.toPath}`);
 
-    if (this.includePatterns.length === 0 && this.excludePatterns.length === 0) {
+    if (this.flattenFlag) {
+      await this.copyFlattened();
+    } else if (this.includePatterns.length === 0 && this.excludePatterns.length === 0) {
       // Fast path: no filtering needed
       await cp(this.fromPath!, this.toPath!, {
         recursive: this.recursiveFlag,
@@ -72,6 +80,24 @@ export class CopyTask extends Task {
     } else {
       // Need to filter files based on include/exclude patterns
       await this.copyWithFilters();
+    }
+  }
+
+  private async copyFlattened() {
+    // Ensure destination directory exists
+    await mkdir(this.toPath!, { recursive: true });
+
+    // Get all files (expand globs)
+    const files = await glob(this.fromPath!, {
+      nodir: true,
+      absolute: true,
+    });
+
+    // Copy each file to destination root
+    for (const srcFile of files) {
+      const filename = basename(srcFile);
+      const destFile = join(this.toPath!, filename);
+      await copyFile(srcFile, destFile);
     }
   }
 
