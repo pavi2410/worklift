@@ -8,7 +8,9 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@worklift/core": "workspace:*"
+    "@worklift/core": "workspace:*",
+    "glob": "^11.0.0",
+    "minimatch": "^9.0.3"
   },
   "devDependencies": {
     "@types/node": "^22.0.0"
