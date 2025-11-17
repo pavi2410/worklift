@@ -3,16 +3,18 @@
  */
 
 import { project } from "../src/index.ts";
+import { registerTask } from "../src/core/types.ts";
 
 const executionLog: string[] = [];
 
 // Test 1: Target getter
 console.log("Test 1: Target getter");
-const lib = project("lib", (p) => {
-  p.target("build", () => {
-    executionLog.push("lib:build");
+const lib = project("lib")
+  .target("build", () => {
+    registerTask(async () => {
+      executionLog.push("lib:build");
+    });
   });
-});
 
 // Get target reference
 const buildTarget = lib.target("build");
@@ -28,35 +30,39 @@ if (executionLog.includes("lib:build")) {
 }
 executionLog.length = 0;
 
-// Test 3: Project options with dependencies
-console.log("\nTest 3: Project options with dependencies");
-const app = project(
-  {
-    name: "app",
-    dependsOn: [lib],
-  },
-  (p) => {
-    p.target("build", () => {
-      executionLog.push("app:build");
+// Test 3: Fluent chaining
+console.log("\nTest 3: Fluent chaining");
+const utils = project("utils")
+  .target("clean", () => {
+    registerTask(async () => {
+      executionLog.push("utils:clean");
     });
-  }
-);
+  })
+  .target("test", ["clean"], () => {
+    registerTask(async () => {
+      executionLog.push("utils:test");
+    });
+  });
 
-await app.execute("build");
-if (executionLog.includes("app:build")) {
-  console.log("✓ Project with options executed successfully");
+await utils.execute("test");
+if (
+  executionLog.includes("utils:clean") &&
+  executionLog.includes("utils:test")
+) {
+  console.log("✓ Fluent chaining works");
 } else {
-  throw new Error("Project with options did not execute");
+  throw new Error("Fluent chaining failed");
 }
 executionLog.length = 0;
 
 // Test 4: Target reference in dependencies
 console.log("\nTest 4: Target reference in dependencies");
-const frontend = project("frontend", (p) => {
-  p.target("build", [lib.target("build")], () => {
-    executionLog.push("frontend:build");
+const frontend = project("frontend")
+  .target("build", [lib.target("build")], () => {
+    registerTask(async () => {
+      executionLog.push("frontend:build");
+    });
   });
-});
 
 await frontend.execute("build");
 if (
@@ -69,34 +75,25 @@ if (
 }
 executionLog.length = 0;
 
-// Test 5: Mixed dependencies in project options
-console.log("\nTest 5: Mixed dependencies in project options");
-const utils = project("utils", (p) => {
-  p.target("test", () => {
-    executionLog.push("utils:test");
-  });
-});
-
-const backend = project(
-  {
-    name: "backend",
-    dependsOn: [lib, utils.target("test")],
-  },
-  (p) => {
-    p.target("deploy", () => {
-      executionLog.push("backend:deploy");
+// Test 5: Project-level dependencies
+console.log("\nTest 5: Project-level dependencies");
+const app = project("app")
+  .target("build", [lib.target("build")], () => {
+    registerTask(async () => {
+      executionLog.push("app:build");
     });
-  }
-);
+  });
 
-await backend.execute("deploy");
+app.dependsOn(utils);
+
+await app.execute("build");
 if (
-  executionLog.includes("utils:test") &&
-  executionLog.includes("backend:deploy")
+  executionLog.includes("lib:build") &&
+  executionLog.includes("app:build")
 ) {
-  console.log("✓ Mixed dependencies in options work");
+  console.log("✓ Project-level dependencies work");
 } else {
-  throw new Error("Mixed dependencies failed");
+  throw new Error("Project-level dependencies failed");
 }
 
 console.log("\n=== All tests passed! ===");

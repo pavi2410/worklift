@@ -10,114 +10,100 @@ import { project } from "../src/index.ts";
 import { exec, copyFile, deleteFile } from "../src/common/index.ts";
 
 // Create a shared library project
-const sharedLib = project("shared-lib", (p) => {
-  p.target("clean", () => {
+const sharedLib = project("shared-lib")
+  .target("clean", () => {
     deleteFile({ paths: "dist/shared", recursive: true });
-  });
-
-  p.target("build", ["clean"], () => {
+  })
+  .target("build", ["clean"], () => {
     exec({
       command: "tsc",
       args: ["--outDir", "dist/shared", "src/shared/**/*.ts"],
     });
-  });
-
-  p.target("test", ["build"], () => {
+  })
+  .target("test", ["build"], () => {
     exec({
       command: "jest",
       args: ["--testPathPattern=shared"],
     });
   });
-});
 
 // Create a utilities project
-const utils = project("utils", (p) => {
-  p.target("clean", () => {
+const utils = project("utils")
+  .target("clean", () => {
     deleteFile({ paths: "dist/utils", recursive: true });
-  });
-
-  p.target("build", ["clean"], () => {
+  })
+  .target("build", ["clean"], () => {
     exec({
       command: "tsc",
       args: ["--outDir", "dist/utils", "src/utils/**/*.ts"],
     });
   });
-});
 
 // Create a core project that depends on sharedLib
-const core = project("core", (p) => {
-  // Project-level dependency: core depends on sharedLib project
-  p.dependsOn(sharedLib);
-
-  p.target("clean", () => {
+const core = project("core")
+  .target("clean", () => {
     deleteFile({ paths: "dist/core", recursive: true });
-  });
-
+  })
   // Target with cross-project dependency on utils:build
-  p.target("build", ["clean", [utils, "build"]], () => {
+  .target("build", ["clean", utils.target("build")], () => {
     exec({
       command: "tsc",
       args: ["--outDir", "dist/core", "src/core/**/*.ts"],
     });
-  });
-
-  p.target("test", ["build"], () => {
+  })
+  .target("test", ["build"], () => {
     exec({
       command: "jest",
       args: ["--testPathPattern=core"],
     });
   });
-});
+
+// Project-level dependency: core depends on sharedLib project
+core.dependsOn(sharedLib);
 
 // Create an API project that depends on both core and utils
-const api = project("api", (p) => {
-  // Multiple project dependencies
-  p.dependsOn(core, utils);
-
-  p.target("clean", () => {
+const api = project("api")
+  .target("clean", () => {
     deleteFile({ paths: "dist/api", recursive: true });
-  });
-
+  })
   // Target with mixed dependencies:
   // - "clean": local target
-  // - [sharedLib, "test"]: specific target from another project
-  p.target("build", ["clean", [sharedLib, "test"]], () => {
+  // - sharedLib.target("test"): specific target from another project
+  .target("build", ["clean", sharedLib.target("test")], () => {
     exec({
       command: "tsc",
       args: ["--outDir", "dist/api", "src/api/**/*.ts"],
     });
-  });
-
-  p.target("start", ["build"], () => {
+  })
+  .target("start", ["build"], () => {
     exec({
       command: "node",
       args: ["dist/api/index.js"],
     });
   });
-});
+
+// Multiple project dependencies
+api.dependsOn(core, utils);
 
 // Create a frontend project that depends on the API
-const frontend = project("frontend", (p) => {
-  p.target("clean", () => {
+const frontend = project("frontend")
+  .target("clean", () => {
     deleteFile({ paths: "dist/frontend", recursive: true });
-  });
-
+  })
   // Depends on API being built
-  p.target("build", ["clean", [api, "build"]], () => {
+  .target("build", ["clean", api.target("build")], () => {
     exec({
       command: "vite",
       args: ["build"],
     });
-  });
-
+  })
   // Depends on API being started
-  p.target("dev", [[api, "start"]], () => {
+  .target("dev", [api.target("start")], () => {
     exec({
       command: "vite",
       args: ["--host"],
     });
   });
-});
 
 // Example usage:
 // Execute the frontend build, which will automatically:
@@ -162,9 +148,9 @@ console.log("\n✓ All projects built successfully!");
  *    - test depends on build
  *
  * 3. Cross-project target dependencies:
- *    - core:build depends on utils:build → ["clean", [utils, "build"]]
- *    - api:build depends on sharedLib:test → ["clean", [sharedLib, "test"]]
- *    - frontend:build depends on api:build → ["clean", [api, "build"]]
+ *    - core:build depends on utils:build → ["clean", utils.target("build")]
+ *    - api:build depends on sharedLib:test → ["clean", sharedLib.target("test")]
+ *    - frontend:build depends on api:build → ["clean", api.target("build")]
  *
  * 4. Cyclic dependency detection:
  *    - The system will throw an error if there are circular dependencies

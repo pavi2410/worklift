@@ -43,21 +43,19 @@ import { project } from "worklift";
 import { copyFile } from "worklift/common";
 import { javac } from "worklift/java";
 
-const app = project("app", (p) => {
-  p.target("build", () => {
+const app = project("app")
+  .target("build", () => {
     javac({
       srcFiles: "src/**/*.java",
       destDir: "build",
     });
-  });
-
-  p.target("test", ["build"], () => {
+  })
+  .target("test", ["build"], () => {
     copyFile({
       from: "test-data",
       to: "build/test-data",
     });
   });
-});
 
 // Execute using target reference
 await app.target("build").execute();
@@ -70,27 +68,23 @@ await app.target("build").execute();
 A project is the top-level container for your build:
 
 ```typescript
-// Simple project
-const myApp = project("my-app", (p) => {
-  // Define targets here
-});
+// Simple project with fluent chaining
+const lib = project("lib")
+  .target("build", () => { /* ... */ })
+  .target("test", ["build"], () => { /* ... */ });
 
-// Project with dependencies (new API)
-const lib = project("lib", (p) => {
-  p.target("build", () => { /* ... */ });
-});
+// Project with dependencies
+const app = project("app")
+  .target("build", () => { /* ... */ });
 
-const app = project({
-  name: "app",
-  dependsOn: [lib, lib.target("test")]
-}, (p) => {
-  // Define targets here
-});
+// Add project-level dependencies
+app.dependsOn(lib);
 
-// Alternative: add dependencies inside project definition
-const app2 = project("app2", (p) => {
-  p.dependsOn(lib); // app depends on lib
-});
+// Target-level dependencies
+const frontend = project("frontend")
+  .target("build", [lib.target("build")], () => {
+    // This runs after lib:build
+  });
 ```
 
 ### Targets
@@ -98,29 +92,30 @@ const app2 = project("app2", (p) => {
 Targets are named groups of tasks that can depend on other targets:
 
 ```typescript
-// Define a target
-p.target("compile", () => {
-  // Tasks go here
-});
+// Define targets with fluent chaining
+const app = project("app")
+  .target("compile", () => {
+    // Tasks go here
+  })
+  .target("package", ["compile"], () => {
+    // This runs after 'compile'
+  });
 
-// Target with local dependencies
-p.target("package", ["compile"], () => {
-  // This runs after 'compile'
-});
-
-// Get target reference (new API)
+// Get target reference
 const buildTarget = lib.target("build");
 await buildTarget.execute(); // Execute directly
 
 // Target with cross-project dependencies using target references
-p.target("build", ["compile", lib.target("test")], () => {
-  // This runs after 'compile' and 'lib:test'
-});
+project("frontend")
+  .target("build", ["compile", lib.target("test")], () => {
+    // This runs after 'compile' and 'lib:test'
+  });
 
 // Legacy tuple syntax (still supported)
-p.target("deploy", [[otherProject, "build"]], () => {
-  // This runs after 'otherProject:build'
-});
+project("api")
+  .target("deploy", [[otherProject, "build"]], () => {
+    // This runs after 'otherProject:build'
+  });
 ```
 
 **Dependency Types:**
@@ -165,39 +160,34 @@ import { project } from "worklift";
 import { copyFile, mkdir, deleteFile } from "worklift/common";
 import { javac, jar } from "worklift/java";
 
-const app = project("app", (p) => {
-  p.target("clean", () => {
+const app = project("app")
+  .target("clean", () => {
     deleteFile({ paths: ["build", "dist"] });
-  });
-
-  p.target("init", ["clean"], () => {
+  })
+  .target("init", ["clean"], () => {
     mkdir({ paths: ["build/classes", "dist"] });
-  });
-
-  p.target("compile", ["init"], () => {
+  })
+  .target("compile", ["init"], () => {
     javac({
       srcFiles: "src/**/*.java",
       destDir: "build/classes",
       source: "11",
       target: "11",
     });
-  });
-
-  p.target("package", ["compile"], () => {
+  })
+  .target("package", ["compile"], () => {
     jar({
       jarFile: "dist/app.jar",
       baseDir: "build/classes",
       mainClass: "com.example.Main",
     });
-  });
-
-  p.target("build", ["package"], () => {
+  })
+  .target("build", ["package"], () => {
     copyFile({
       from: ["README.md", "LICENSE"],
       to: "dist/",
     });
   });
-});
 
 // Execute a target
 await app.execute("build");

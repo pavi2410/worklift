@@ -8,44 +8,39 @@ import { project } from "../src/index.ts";
 const executionOrder: string[] = [];
 
 // Project A - no dependencies
-const projectA = project("projectA", (p) => {
-  p.target("build", () => {
+const projectA = project("projectA")
+  .target("build", () => {
     executionOrder.push("projectA:build");
   });
-});
 
 // Project B - depends on Project A
-const projectB = project("projectB", (p) => {
-  p.dependsOn(projectA);
-
-  p.target("build", () => {
+const projectB = project("projectB")
+  .target("build", () => {
     executionOrder.push("projectB:build");
   });
-});
+
+projectB.dependsOn(projectA);
 
 // Project C - target depends on projectA:build
-const projectC = project("projectC", (p) => {
-  p.target("build", [[projectA, "build"]], () => {
+const projectC = project("projectC")
+  .target("build", [projectA.target("build")], () => {
     executionOrder.push("projectC:build");
   });
-});
 
 // Project D - multiple dependency types
-const projectD = project("projectD", (p) => {
-  // Project-level dependency on B
-  p.dependsOn(projectB);
-
-  p.target("clean", () => {
+const projectD = project("projectD")
+  .target("clean", () => {
     executionOrder.push("projectD:clean");
-  });
-
+  })
   // Target with mixed dependencies:
   // - "clean": local target
-  // - [projectC, "build"]: cross-project target
-  p.target("build", ["clean", [projectC, "build"]], () => {
+  // - projectC.target("build"): cross-project target
+  .target("build", ["clean", projectC.target("build")], () => {
     executionOrder.push("projectD:build");
   });
-});
+
+// Project-level dependency on B
+projectD.dependsOn(projectB);
 
 // Execute and verify order
 await projectD.execute("build");

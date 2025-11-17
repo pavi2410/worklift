@@ -6,7 +6,6 @@
 export { project } from "./core/project.ts";
 export type {
   Project,
-  ProjectOptions,
   Target,
   Dependency,
   TaskOptions,
