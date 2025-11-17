@@ -15,6 +15,8 @@ export class CopyTask extends Task {
   private flattenFlag = false;
   private includePatterns: string[] = [];
   private excludePatterns: string[] = [];
+  private renamePattern?: RegExp;
+  private renameReplacement?: string;
 
   inputs?: string | string[];
   outputs?: string | string[];
@@ -57,6 +59,12 @@ export class CopyTask extends Task {
     return this;
   }
 
+  rename(pattern: RegExp, replacement: string): this {
+    this.renamePattern = pattern;
+    this.renameReplacement = replacement;
+    return this;
+  }
+
   validate() {
     if (!this.fromPath) {
       throw new Error("CopyTask: 'from' is required");
@@ -69,7 +77,10 @@ export class CopyTask extends Task {
   async execute() {
     console.log(`  ↳ Copying ${this.fromPath} to ${this.toPath}`);
 
-    if (this.flattenFlag) {
+    if (this.renamePattern) {
+      // Need to rename files during copy
+      await this.copyWithRename();
+    } else if (this.flattenFlag) {
       await this.copyFlattened();
     } else if (this.includePatterns.length === 0 && this.excludePatterns.length === 0) {
       // Fast path: no filtering needed
@@ -127,6 +138,64 @@ export class CopyTask extends Task {
       } else {
         await mkdir(dirname(destFile), { recursive: true });
         await copyFile(srcFile, destFile);
+      }
+    }
+  }
+
+  private async copyWithRename() {
+    const { basename, dirname: pathDirname, resolve } = await import("path");
+    const { mkdir, copyFile } = await import("fs/promises");
+
+    // Determine if fromPath is a glob pattern or a directory
+    const isGlobPattern = this.fromPath!.includes("*");
+
+    // Get all files to copy
+    const globPattern = isGlobPattern
+      ? this.fromPath!
+      : `${this.fromPath}/**/*`;
+
+    const allFiles = await glob(globPattern, {
+      nodir: true,
+      absolute: true,
+      dot: true,
+    });
+
+    // Determine the base directory for relative path calculation
+    const baseDir = isGlobPattern
+      ? this.fromPath!.split("*")[0].replace(/\/$/, "")
+      : this.fromPath!;
+
+    for (const srcFile of allFiles) {
+      // Calculate relative path from base directory
+      const relativeFromBase = relative(baseDir, srcFile);
+
+      // Check if file should be included based on include/exclude patterns
+      if (!this.shouldIncludeFile(relativeFromBase)) {
+        continue;
+      }
+
+      // Apply rename pattern to the filename
+      const filename = basename(srcFile);
+      const newFilename = filename.replace(
+        this.renamePattern!,
+        this.renameReplacement!
+      );
+
+      // Determine destination path, preserving directory structure
+      const relativeDir = pathDirname(relativeFromBase);
+      const destFile = relativeDir === "." || relativeDir === ""
+        ? join(this.toPath!, newFilename)
+        : join(this.toPath!, relativeDir, newFilename);
+
+      // Ensure destination directory exists
+      await mkdir(pathDirname(destFile), { recursive: true });
+
+      // Copy file
+      await copyFile(srcFile, destFile);
+
+      // Log rename if filename changed
+      if (newFilename !== filename) {
+        console.log(`    ${filename} → ${newFilename}`);
       }
     }
   }
