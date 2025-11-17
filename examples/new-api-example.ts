@@ -1,113 +1,145 @@
 /**
- * Example demonstrating the new API design
+ * Example demonstrating the class-based tasks API
  * - Get target references using project.target("name")
  * - Execute targets using await target.execute()
- * - Chained method calls for defining targets
+ * - Use class-based tasks with .tasks([...])
  */
 
 import { project } from "../src/index.ts";
-import { deleteFile } from "../src/common/index.ts";
+import { DeleteTask, ExecTask } from "../src/index.ts";
 
 // Track execution for demo purposes
 const executionLog: string[] = [];
 
+// Helper task to log execution
+class LogTask extends ExecTask {
+  static log(message: string): LogTask {
+    const task = ExecTask.command("echo").args([message]) as LogTask;
+    return task;
+  }
+}
+
 // Create a shared library project
-const sharedLib = project("shared-lib")
-  .target("clean", () => {
-    executionLog.push("shared-lib:clean");
-    deleteFile({ paths: "dist/shared", recursive: true });
-  })
-  .target("build", ["clean"], () => {
-    executionLog.push("shared-lib:build");
-  })
-  .target("test", ["build"], () => {
-    executionLog.push("shared-lib:test");
-  });
+const sharedLib = project("shared-lib");
+
+const sharedLibClean = sharedLib.target("clean").tasks([
+  DeleteTask.paths("dist/shared"),
+  LogTask.log("shared-lib:clean"),
+]);
+
+const sharedLibBuild = sharedLib.target("build")
+  .dependsOn(sharedLibClean)
+  .tasks([
+    LogTask.log("shared-lib:build"),
+  ]);
+
+const sharedLibTest = sharedLib.target("test")
+  .dependsOn(sharedLibBuild)
+  .tasks([
+    LogTask.log("shared-lib:test"),
+  ]);
 
 // Create a utils project
-const utils = project("utils")
-  .target("clean", () => {
-    executionLog.push("utils:clean");
-    deleteFile({ paths: "dist/utils", recursive: true });
-  })
-  .target("build", ["clean"], () => {
-    executionLog.push("utils:build");
-  });
+const utils = project("utils");
+
+const utilsClean = utils.target("clean").tasks([
+  DeleteTask.paths("dist/utils"),
+  LogTask.log("utils:clean"),
+]);
+
+const utilsBuild = utils.target("build")
+  .dependsOn(utilsClean)
+  .tasks([
+    LogTask.log("utils:build"),
+  ]);
 
 // Create a core project with dependencies
-const core = project("core")
-  .target("clean", () => {
-    executionLog.push("core:clean");
-    deleteFile({ paths: "dist/core", recursive: true });
-  })
-  // Using target reference in dependencies
-  .target("build", ["clean", utils.target("build")], () => {
-    executionLog.push("core:build");
-  })
-  .target("test", ["build"], () => {
-    executionLog.push("core:test");
-  });
+const core = project("core");
+
+const coreClean = core.target("clean").tasks([
+  DeleteTask.paths("dist/core"),
+  LogTask.log("core:clean"),
+]);
+
+// Using target reference in dependencies
+const coreBuild = core.target("build")
+  .dependsOn(coreClean, utilsBuild)
+  .tasks([
+    LogTask.log("core:build"),
+  ]);
+
+const coreTest = core.target("test")
+  .dependsOn(coreBuild)
+  .tasks([
+    LogTask.log("core:test"),
+  ]);
 
 // Add project-level dependency
 core.dependsOn(sharedLib);
 
 // Create an API project with multiple dependencies
-const api = project("api")
-  .target("clean", () => {
-    executionLog.push("api:clean");
-    deleteFile({ paths: "dist/api", recursive: true });
-  })
-  .target("build", ["clean"], () => {
-    executionLog.push("api:build");
-  })
-  .target("start", ["build"], () => {
-    executionLog.push("api:start");
-  });
+const api = project("api");
+
+const apiClean = api.target("clean").tasks([
+  DeleteTask.paths("dist/api"),
+  LogTask.log("api:clean"),
+]);
+
+const apiBuild = api.target("build")
+  .dependsOn(apiClean)
+  .tasks([
+    LogTask.log("api:build"),
+  ]);
+
+const apiStart = api.target("start")
+  .dependsOn(apiBuild)
+  .tasks([
+    LogTask.log("api:start"),
+  ]);
 
 // Add project-level dependencies
 api.dependsOn(core, sharedLib);
 
-// Example 1: Execute using the old way (still works!)
+// Example 1: Execute using project.execute()
 console.log("\n=== Example 1: Execute via project.execute() ===");
 await api.execute("build");
-console.log("Execution log:", executionLog);
-executionLog.length = 0; // Clear log
 
 // Example 2: Execute using target reference
 console.log("\n=== Example 2: Execute via target.execute() ===");
-const buildTarget = api.target("build");
-await buildTarget.execute();
-console.log("Execution log:", executionLog);
-executionLog.length = 0; // Clear log
+await apiBuild.execute();
 
-// Example 3: Get and execute in one go
-console.log("\n=== Example 3: Get target and execute ===");
-await api.target("start").execute();
-console.log("Execution log:", executionLog);
+// Example 3: Execute with dependencies
+console.log("\n=== Example 3: Execute with dependencies ===");
+await apiStart.execute();
 
 console.log("\n✓ All examples completed successfully!");
 
 /**
  * Key API features:
  *
- * 1. Fluent Chaining:
- *    const app = project("app")
- *      .target("clean", () => { ... })
- *      .target("build", ["clean"], () => { ... });
+ * 1. Class-based tasks:
+ *    - Tasks extend the Task base class
+ *    - Use static factory methods: DeleteTask.paths(...)
+ *    - Fluent builder pattern: .recursive(true)
  *
- * 2. Target References:
- *    const buildTarget = project.target("build");
+ * 2. Declarative target definition:
+ *    const clean = project.target("clean").tasks([
+ *      DeleteTask.paths("dist"),
+ *    ]);
+ *
+ * 3. Target References:
+ *    const buildTarget = project.target("build").tasks([...]);
  *    await buildTarget.execute();
  *
- * 3. Target References in Dependencies:
- *    .target("build", [otherProject.target("compile")], () => { ... });
+ * 4. Target References in Dependencies:
+ *    const build = project.target("build")
+ *      .dependsOn(otherTarget, anotherTarget)
+ *      .tasks([...]);
  *
- * 4. Project Dependencies:
+ * 5. Project Dependencies:
  *    core.dependsOn(sharedLib, utils);
  *
- * 5. Dependency Types:
- *    - "clean" - local target name
- *    - lib - project reference
- *    - lib.target("build") - target reference
- *    - [lib, "build"] - tuple syntax (still supported)
+ * 6. Dependency Types:
+ *    - Target reference: buildTarget
+ *    - Project reference: lib
  */

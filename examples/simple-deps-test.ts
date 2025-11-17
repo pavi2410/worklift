@@ -3,41 +3,62 @@
  */
 
 import { project } from "../src/index.ts";
+import { ExecTask } from "../src/index.ts";
 
 // Track execution order
 const executionOrder: string[] = [];
 
+// Helper to track execution
+class TrackTask extends ExecTask {
+  static track(name: string): TrackTask {
+    const task = ExecTask.command("echo").args([name]) as TrackTask;
+    // Override execute to also track
+    const originalExecute = task.execute.bind(task);
+    task.execute = async () => {
+      executionOrder.push(name);
+      await originalExecute();
+    };
+    return task;
+  }
+}
+
 // Project A - no dependencies
-const projectA = project("projectA")
-  .target("build", () => {
-    executionOrder.push("projectA:build");
-  });
+const projectA = project("projectA");
+const projectABuild = projectA.target("build").tasks([
+  TrackTask.track("projectA:build"),
+]);
 
 // Project B - depends on Project A
-const projectB = project("projectB")
-  .target("build", () => {
-    executionOrder.push("projectB:build");
-  });
+const projectB = project("projectB");
+const projectBBuild = projectB.target("build").tasks([
+  TrackTask.track("projectB:build"),
+]);
 
 projectB.dependsOn(projectA);
 
 // Project C - target depends on projectA:build
-const projectC = project("projectC")
-  .target("build", [projectA.target("build")], () => {
-    executionOrder.push("projectC:build");
-  });
+const projectC = project("projectC");
+const projectCBuild = projectC.target("build")
+  .dependsOn(projectABuild)
+  .tasks([
+    TrackTask.track("projectC:build"),
+  ]);
 
 // Project D - multiple dependency types
-const projectD = project("projectD")
-  .target("clean", () => {
-    executionOrder.push("projectD:clean");
-  })
-  // Target with mixed dependencies:
-  // - "clean": local target
-  // - projectC.target("build"): cross-project target
-  .target("build", ["clean", projectC.target("build")], () => {
-    executionOrder.push("projectD:build");
-  });
+const projectD = project("projectD");
+
+const projectDClean = projectD.target("clean").tasks([
+  TrackTask.track("projectD:clean"),
+]);
+
+// Target with mixed dependencies:
+// - projectDClean: local target
+// - projectCBuild: cross-project target
+const projectDBuild = projectD.target("build")
+  .dependsOn(projectDClean, projectCBuild)
+  .tasks([
+    TrackTask.track("projectD:build"),
+  ]);
 
 // Project-level dependency on B
 projectD.dependsOn(projectB);

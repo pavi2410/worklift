@@ -1,28 +1,38 @@
 /**
- * Test the new API features
+ * Test the class-based API features
  */
 
 import { project } from "../src/index.ts";
-import { registerTask } from "../src/core/types.ts";
+import { ExecTask } from "../src/index.ts";
 
 const executionLog: string[] = [];
 
-// Test 1: Target getter
-console.log("Test 1: Target getter");
-const lib = project("lib")
-  .target("build", () => {
-    registerTask(async () => {
-      executionLog.push("lib:build");
-    });
-  });
+// Helper to track execution
+class TrackTask extends ExecTask {
+  static track(name: string): TrackTask {
+    const task = ExecTask.command("echo").args([name]) as TrackTask;
+    // Override execute to also track
+    const originalExecute = task.execute.bind(task);
+    task.execute = async () => {
+      executionLog.push(name);
+      await originalExecute();
+    };
+    return task;
+  }
+}
 
-// Get target reference
-const buildTarget = lib.target("build");
-console.log(`✓ Got target reference: ${buildTarget.name}`);
+// Test 1: Target getter and declarative tasks
+console.log("Test 1: Target getter and declarative tasks");
+const lib = project("lib");
+const libBuild = lib.target("build").tasks([
+  TrackTask.track("lib:build"),
+]);
+
+console.log(`✓ Got target reference: ${libBuild.name}`);
 
 // Test 2: Execute via target.execute()
 console.log("\nTest 2: Execute via target.execute()");
-await buildTarget.execute();
+await libBuild.execute();
 if (executionLog.includes("lib:build")) {
   console.log("✓ Target executed successfully");
 } else {
@@ -30,39 +40,39 @@ if (executionLog.includes("lib:build")) {
 }
 executionLog.length = 0;
 
-// Test 3: Fluent chaining
-console.log("\nTest 3: Fluent chaining");
-const utils = project("utils")
-  .target("clean", () => {
-    registerTask(async () => {
-      executionLog.push("utils:clean");
-    });
-  })
-  .target("test", ["clean"], () => {
-    registerTask(async () => {
-      executionLog.push("utils:test");
-    });
-  });
+// Test 3: Target dependencies with .dependsOn()
+console.log("\nTest 3: Target dependencies with .dependsOn()");
+const utils = project("utils");
+
+const utilsClean = utils.target("clean").tasks([
+  TrackTask.track("utils:clean"),
+]);
+
+const utilsTest = utils.target("test")
+  .dependsOn(utilsClean)
+  .tasks([
+    TrackTask.track("utils:test"),
+  ]);
 
 await utils.execute("test");
 if (
   executionLog.includes("utils:clean") &&
   executionLog.includes("utils:test")
 ) {
-  console.log("✓ Fluent chaining works");
+  console.log("✓ Target dependencies work");
 } else {
-  throw new Error("Fluent chaining failed");
+  throw new Error("Target dependencies failed");
 }
 executionLog.length = 0;
 
 // Test 4: Target reference in dependencies
 console.log("\nTest 4: Target reference in dependencies");
-const frontend = project("frontend")
-  .target("build", [lib.target("build")], () => {
-    registerTask(async () => {
-      executionLog.push("frontend:build");
-    });
-  });
+const frontend = project("frontend");
+const frontendBuild = frontend.target("build")
+  .dependsOn(libBuild)
+  .tasks([
+    TrackTask.track("frontend:build"),
+  ]);
 
 await frontend.execute("build");
 if (
@@ -77,12 +87,12 @@ executionLog.length = 0;
 
 // Test 5: Project-level dependencies
 console.log("\nTest 5: Project-level dependencies");
-const app = project("app")
-  .target("build", [lib.target("build")], () => {
-    registerTask(async () => {
-      executionLog.push("app:build");
-    });
-  });
+const app = project("app");
+const appBuild = app.target("build")
+  .dependsOn(libBuild)
+  .tasks([
+    TrackTask.track("app:build"),
+  ]);
 
 app.dependsOn(utils);
 
