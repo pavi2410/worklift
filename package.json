@@ -1,10 +1,21 @@
 {
-  "name": "worlift-project",
-  "private": true,
-  "workspaces": [
-    "packages/*"
-  ],
+  "name": "worklift",
+  "version": "0.1.0",
+  "description": "A modern build tool with TypeScript DSL - an alternative to Apache Ant",
+  "module": "src/index.ts",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./common": "./src/common/index.ts",
+    "./java": "./src/java/index.ts"
+  },
   "scripts": {
-    "example": "cd ./packages/example && worklift"
+    "example": "bun run examples/example.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
   }
 }
