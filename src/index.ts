@@ -4,5 +4,12 @@
  */
 
 export { project } from "./core/project.ts";
-export type { Project, Target, TaskOptions, TaskFn } from "./core/types.ts";
+export type {
+  Project,
+  ProjectOptions,
+  Target,
+  Dependency,
+  TaskOptions,
+  TaskFn,
+} from "./core/types.ts";
 export { executeTask, normalizePath, normalizePaths } from "./core/task.ts";
