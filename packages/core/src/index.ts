@@ -6,3 +6,4 @@ export { Task } from "./Task.ts";
 export { project } from "./project.ts";
 export type { Project, Target, Dependency } from "./types.ts";
 export { TaskScheduler } from "./TaskScheduler.ts";
+export { Artifact, artifact } from "./Artifact.ts";

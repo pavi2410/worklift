@@ -3,6 +3,7 @@
  */
 
 import type { Task } from "./Task.ts";
+import type { Artifact } from "./Artifact.ts";
 
 /**
  * Dependency types:
@@ -24,10 +25,14 @@ export interface Target {
   dependencies: Dependency[];
   /** Tasks to execute for this target */
   taskList: Task[];
+  /** Artifacts produced by this target */
+  producedArtifacts: Artifact[];
   /** Add dependencies to this target */
   dependsOn(...deps: Dependency[]): Target;
   /** Set tasks for this target */
   tasks(tasks: Task[]): Target;
+  /** Declare artifacts that this target produces */
+  produces(...artifacts: Artifact[]): Target;
   /** Execute the target */
   execute(): Promise<void>;
 }

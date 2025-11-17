@@ -1,14 +1,21 @@
-import { Task } from "@worklift/core";
+import { Task, Artifact } from "@worklift/core";
 import { spawn } from "child_process";
 import { delimiter } from "path";
 
 /**
+ * Type for classpath elements - can be strings, string arrays, or artifacts
+ */
+type ClasspathElement = string | string[] | Artifact<string[]>;
+
+/**
  * Task for running Java applications
+ *
+ * Supports consuming classpath from artifacts produced by dependency resolution tasks.
  */
 export class JavaTask extends Task {
   private mainClass?: string;
   private jarFile?: string;
-  private classpathList?: string[];
+  private classpathElements: ClasspathElement[] = [];
   private jvmArgs: string[] = [];
   private programArgs: string[] = [];
 
@@ -28,9 +35,42 @@ export class JavaTask extends Task {
     return task;
   }
 
-  classpath(paths: string[]): this {
-    this.classpathList = paths;
+  /**
+   * Add classpath entries for running the Java application.
+   *
+   * Accepts a mix of:
+   * - Individual path strings
+   * - String arrays of paths
+   * - Artifacts containing path arrays (from dependency resolution)
+   *
+   * All elements are resolved and concatenated at execution time.
+   *
+   * @param elements - Classpath elements to add
+   * @returns This task for chaining
+   */
+  classpath(...elements: ClasspathElement[]): this {
+    this.classpathElements.push(...elements);
     return this;
+  }
+
+  /**
+   * Resolve all classpath elements to a flat array of paths
+   */
+  private resolveClasspath(): string[] {
+    const resolved: string[] = [];
+
+    for (const element of this.classpathElements) {
+      if (typeof element === "string") {
+        resolved.push(element);
+      } else if (Array.isArray(element)) {
+        resolved.push(...element);
+      } else if (element instanceof Artifact) {
+        const paths = this.readArtifact(element);
+        resolved.push(...paths);
+      }
+    }
+
+    return resolved;
   }
 
   jvmArgs(args: string[]): this {
@@ -59,8 +99,10 @@ export class JavaTask extends Task {
     if (this.jarFile) {
       args.push("-jar", this.jarFile);
     } else {
-      if (this.classpathList && this.classpathList.length > 0) {
-        args.push("-cp", this.classpathList.join(delimiter));
+      // Resolve classpath from all sources (strings, arrays, artifacts)
+      const classpath = this.resolveClasspath();
+      if (classpath.length > 0) {
+        args.push("-cp", classpath.join(delimiter));
       }
       args.push(this.mainClass!);
     }

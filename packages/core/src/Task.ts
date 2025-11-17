@@ -1,5 +1,6 @@
 import { glob } from "glob";
 import { resolve } from "path";
+import type { Artifact } from "./Artifact.ts";
 
 /**
  * Base class for all tasks in Worklift
@@ -7,6 +8,9 @@ import { resolve } from "path";
  * Tasks represent individual build operations that can be executed.
  * They declare their inputs and outputs for incremental build support
  * and automatic parallelization.
+ *
+ * Tasks can also produce and consume typed artifacts for passing data
+ * between targets beyond file-based dependencies.
  */
 export abstract class Task {
   /**
@@ -87,5 +91,41 @@ export abstract class Task {
     }
 
     return resolved;
+  }
+
+  /**
+   * Write a value to an artifact with validation.
+   * Use this in task.execute() to produce artifact values.
+   *
+   * @example
+   * ```typescript
+   * async execute(): Promise<void> {
+   *   const paths = await this.downloadDependencies();
+   *   await this.writeArtifact(this.outputArtifact, paths);
+   * }
+   * ```
+   */
+  protected async writeArtifact<T>(
+    artifact: Artifact<T>,
+    value: T
+  ): Promise<void> {
+    artifact.setValue(value);
+  }
+
+  /**
+   * Read a value from an artifact.
+   * Use this in task.execute() to consume artifact values.
+   * Throws if the artifact hasn't been set by a dependency target.
+   *
+   * @example
+   * ```typescript
+   * async execute(): Promise<void> {
+   *   const classpath = this.readArtifact(this.classpathArtifact);
+   *   await this.compile(classpath);
+   * }
+   * ```
+   */
+  protected readArtifact<T>(artifact: Artifact<T>): T {
+    return artifact.getValue();
   }
 }

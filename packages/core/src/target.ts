@@ -1,5 +1,6 @@
 import type { Target, Dependency, Project } from "./types.ts";
 import type { Task } from "./Task.ts";
+import type { Artifact } from "./Artifact.ts";
 import { TaskScheduler } from "./TaskScheduler.ts";
 
 /**
@@ -10,6 +11,7 @@ export class TargetImpl implements Target {
   project?: Project;
   dependencies: Dependency[] = [];
   taskList: Task[] = [];
+  producedArtifacts: Artifact[] = [];
 
   constructor(name: string, project?: Project) {
     this.name = name;
@@ -21,6 +23,14 @@ export class TargetImpl implements Target {
    */
   dependsOn(...deps: Dependency[]): Target {
     this.dependencies.push(...deps);
+    return this;
+  }
+
+  /**
+   * Declare artifacts that this target produces
+   */
+  produces(...artifacts: Artifact[]): Target {
+    this.producedArtifacts.push(...artifacts);
     return this;
   }
 
