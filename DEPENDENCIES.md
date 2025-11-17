@@ -1,10 +1,79 @@
 # Dependency Support in Worklift
 
-Worklift now supports comprehensive dependency management between projects and targets.
+Worklift supports comprehensive dependency management between projects and targets with a flexible, type-safe API.
+
+## Quick Start
+
+```typescript
+import { project } from "worklift";
+
+// Create projects with dependencies
+const lib = project("lib", (p) => {
+  p.target("build", () => { /* ... */ });
+});
+
+const app = project({
+  name: "app",
+  dependsOn: [lib, lib.target("test")]
+}, (p) => {
+  p.target("build", [lib.target("build")], () => { /* ... */ });
+});
+
+// Execute using target reference
+await app.target("build").execute();
+```
 
 ## Features
 
-### 1. Target Dependencies (within same project)
+### 1. Getting Target References
+
+Get a reference to a target to use in dependencies or execute directly:
+
+```typescript
+const lib = project("lib", (p) => {
+  p.target("build", () => {
+    // Build library
+  });
+});
+
+// Get target reference
+const buildTarget = lib.target("build");
+
+// Execute directly
+await buildTarget.execute();
+
+// Use in dependencies
+const app = project("app", (p) => {
+  p.target("build", [buildTarget], () => {
+    // Build app
+  });
+});
+```
+
+### 2. Project Options
+
+Define project dependencies upfront using options object:
+
+```typescript
+const app = project({
+  name: "app",
+  dependsOn: [lib1, lib2, lib3.target("test")]
+}, (p) => {
+  p.target("build", () => {
+    // All dependencies will be resolved before any target executes
+  });
+});
+```
+
+**Old API (still supported):**
+```typescript
+const app = project("app", (p) => {
+  p.dependsOn(lib1, lib2);
+  // ...
+});
+```
+
+### 3. Target Dependencies (within same project)
 
 Define dependencies between targets in the same project:
 
@@ -97,21 +166,28 @@ const app = project("app", (p) => {
 
 ## Dependency Types
 
-The `Dependency` type supports three formats:
+The `Dependency` type supports four formats:
 
 1. **`string`** - Target name within the same project
    ```typescript
    p.target("build", ["clean"], () => { ... });
    ```
 
-2. **`Project`** - Entire project dependency
+2. **`Target`** - Direct target reference (NEW!)
+   ```typescript
+   const buildTarget = lib.target("build");
+   p.target("deploy", [buildTarget], () => { ... });
+   ```
+
+3. **`Project`** - Entire project dependency
    ```typescript
    p.target("build", [libProject], () => { ... });
    ```
 
-3. **`[Project, string]`** - Specific target from another project
+4. **`[Project, string]`** - Specific target from another project (legacy)
    ```typescript
    p.target("build", [[libProject, "test"]], () => { ... });
+   // Prefer using: p.target("build", [libProject.target("test")], () => { ... });
    ```
 
 ## Features

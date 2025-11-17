@@ -1,4 +1,4 @@
-import type { Project, Target, Dependency } from "./types.ts";
+import type { Project, Target, Dependency, ProjectOptions } from "./types.ts";
 import { setCurrentProject, setCurrentTarget, projects } from "./types.ts";
 import { TargetImpl } from "./target.ts";
 
@@ -24,20 +24,30 @@ export class ProjectImpl implements Project {
   }
 
   /**
-   * Define a new target
+   * Define a new target or get an existing target reference
    */
-  target(name: string, fnOrDeps: Dependency[] | (() => void), maybeFn?: () => void): void {
+  target(name: string, fnOrDeps?: Dependency[] | (() => void), maybeFn?: () => void): Target {
+    // If only name is provided, get the target reference
+    if (fnOrDeps === undefined && maybeFn === undefined) {
+      const target = this.targets.get(name);
+      if (!target) {
+        throw new Error(`Target "${name}" not found in project "${this.name}"`);
+      }
+      return target;
+    }
+
+    // Otherwise, define a new target
     let dependencies: Dependency[] = [];
     let fn: () => void;
 
     if (typeof fnOrDeps === "function") {
       fn = fnOrDeps;
     } else {
-      dependencies = fnOrDeps;
+      dependencies = fnOrDeps!;
       fn = maybeFn!;
     }
 
-    const target = new TargetImpl(name, dependencies);
+    const target = new TargetImpl(name, dependencies, this);
     this.targets.set(name, target);
 
     // Execute the target definition function with this target as context
@@ -47,6 +57,8 @@ export class ProjectImpl implements Project {
     } finally {
       setCurrentTarget(null);
     }
+
+    return target;
   }
 
   /**
@@ -136,7 +148,7 @@ export class ProjectImpl implements Project {
   }
 
   /**
-   * Execute a single dependency (can be string, Project, or [Project, string])
+   * Execute a single dependency (can be string, Target, Project, or [Project, string])
    */
   private async executeDependency(
     dep: Dependency,
@@ -175,6 +187,28 @@ export class ProjectImpl implements Project {
           await depProject.executeTargetWithDeps(target, executedTargets, executedProjects, inProgress);
         }
       }
+    } else if ("dependencies" in dep && "tasks" in dep) {
+      // Target dependency
+      const target = dep as Target;
+      const depProject = target.project;
+
+      if (!depProject) {
+        throw new Error(
+          `Target "${target.name}" does not have a parent project reference`
+        );
+      }
+
+      // Execute the project's dependencies first
+      await this.executeProjectDeps(depProject, executedProjects, inProgress);
+
+      // Then execute the specific target
+      const targetKey = `${depProject.name}:${target.name}`;
+      if (!executedTargets.has(targetKey)) {
+        // Execute dependencies of that target in the context of the dependency project
+        if (depProject instanceof ProjectImpl) {
+          await depProject.executeTargetWithDeps(target, executedTargets, executedProjects, inProgress);
+        }
+      }
     } else {
       // Project dependency
       await this.executeProjectDeps(dep, executedProjects, inProgress);
@@ -183,10 +217,41 @@ export class ProjectImpl implements Project {
 }
 
 /**
- * Create a new project or retrieve an existing one
+ * Create a new project
  */
-export function project(name: string, fn: (p: Project) => void): Project {
+export function project(options: ProjectOptions, fn: (p: Project) => void): Project;
+export function project(name: string, fn: (p: Project) => void): Project;
+export function project(
+  nameOrOptions: string | ProjectOptions,
+  fn: (p: Project) => void
+): Project {
+  // Parse options
+  let name: string;
+  let dependencies: Dependency[] = [];
+
+  if (typeof nameOrOptions === "string") {
+    name = nameOrOptions;
+  } else {
+    name = nameOrOptions.name;
+    dependencies = nameOrOptions.dependsOn || [];
+  }
+
   const proj = new ProjectImpl(name);
+
+  // Process dependencies
+  for (const dep of dependencies) {
+    if (typeof dep === "string") {
+      throw new Error(
+        `String dependencies not allowed in project options. Use project references or [project, "target"] tuples.`
+      );
+    } else if (Array.isArray(dep)) {
+      // [Project, targetName] - add the project as a dependency
+      proj.dependencies.push(dep[0]);
+    } else {
+      // Project dependency
+      proj.dependencies.push(dep);
+    }
+  }
 
   setCurrentProject(proj);
   try {

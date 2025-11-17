@@ -43,7 +43,7 @@ import { project } from "worklift";
 import { copyFile } from "worklift/common";
 import { javac } from "worklift/java";
 
-project("app", (p) => {
+const app = project("app", (p) => {
   p.target("build", () => {
     javac({
       srcFiles: "src/**/*.java",
@@ -51,13 +51,16 @@ project("app", (p) => {
     });
   });
 
-  p.target("test", () => {
+  p.target("test", ["build"], () => {
     copyFile({
       from: "test-data",
       to: "build/test-data",
     });
   });
 });
+
+// Execute using target reference
+await app.target("build").execute();
 ```
 
 ## Core Concepts
@@ -67,19 +70,25 @@ project("app", (p) => {
 A project is the top-level container for your build:
 
 ```typescript
+// Simple project
 const myApp = project("my-app", (p) => {
   // Define targets here
 });
-```
 
-Projects can depend on other projects:
-
-```typescript
+// Project with dependencies (new API)
 const lib = project("lib", (p) => {
   p.target("build", () => { /* ... */ });
 });
 
-const app = project("app", (p) => {
+const app = project({
+  name: "app",
+  dependsOn: [lib, lib.target("test")]
+}, (p) => {
+  // Define targets here
+});
+
+// Alternative: add dependencies inside project definition
+const app2 = project("app2", (p) => {
   p.dependsOn(lib); // app depends on lib
 });
 ```
@@ -89,6 +98,7 @@ const app = project("app", (p) => {
 Targets are named groups of tasks that can depend on other targets:
 
 ```typescript
+// Define a target
 p.target("compile", () => {
   // Tasks go here
 });
@@ -98,16 +108,26 @@ p.target("package", ["compile"], () => {
   // This runs after 'compile'
 });
 
-// Target with cross-project dependencies
-p.target("build", ["compile", [otherProject, "test"]], () => {
-  // This runs after 'compile' and 'otherProject:test'
+// Get target reference (new API)
+const buildTarget = lib.target("build");
+await buildTarget.execute(); // Execute directly
+
+// Target with cross-project dependencies using target references
+p.target("build", ["compile", lib.target("test")], () => {
+  // This runs after 'compile' and 'lib:test'
+});
+
+// Legacy tuple syntax (still supported)
+p.target("deploy", [[otherProject, "build"]], () => {
+  // This runs after 'otherProject:build'
 });
 ```
 
 **Dependency Types:**
 - `"targetName"` - Depend on a target in the same project
+- `project.target("name")` - Depend on a specific target (recommended)
 - `otherProject` - Depend on another project
-- `[otherProject, "targetName"]` - Depend on a specific target in another project
+- `[otherProject, "targetName"]` - Tuple syntax (legacy)
 
 See [DEPENDENCIES.md](DEPENDENCIES.md) for detailed documentation.
 
