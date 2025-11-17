@@ -8,13 +8,14 @@
     "packages/*"
   ],
   "scripts": {
-    "example": "bun run examples/example.ts"
+    "example": "bun run examples/example.ts",
+    "test": "bun test"
   },
   "dependencies": {
     "glob": "^11.0.0"
   },
   "devDependencies": {
-    "@types/bun": "latest",
+    "@types/bun": "^1.3.2",
     "@types/node": "^22.0.0",
     "typescript": "^5"
   }
