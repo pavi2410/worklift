@@ -1,5 +1,5 @@
 import type { Project, Target, Dependency } from "./types.ts";
-import { setCurrentTarget, projects } from "./types.ts";
+import { projects } from "./types.ts";
 import { TargetImpl } from "./target.ts";
 
 /**
@@ -17,52 +17,27 @@ export class ProjectImpl implements Project {
   }
 
   /**
-   * Add project dependencies
+   * Add project dependencies (returns this for chaining)
    */
-  dependsOn(...deps: Project[]): void {
+  dependsOn(...deps: Project[]): Project {
     this.dependencies.push(...deps);
+    return this;
   }
 
   /**
-   * Define a new target or get an existing target reference
+   * Create a new target
    */
-  target(name: string): Target;
-  target(name: string, fn: () => void): Project;
-  target(name: string, dependencies: Dependency[], fn: () => void): Project;
-  target(name: string, fnOrDeps?: Dependency[] | (() => void), maybeFn?: () => void): Target | Project {
-    // If only name is provided, get the target reference
-    if (fnOrDeps === undefined && maybeFn === undefined) {
-      const target = this.targets.get(name);
-      if (!target) {
-        throw new Error(`Target "${name}" not found in project "${this.name}"`);
-      }
-      return target;
+  target(name: string): Target {
+    // Check if target already exists
+    if (this.targets.has(name)) {
+      throw new Error(
+        `Target "${name}" already exists in project "${this.name}"`
+      );
     }
 
-    // Otherwise, define a new target
-    let dependencies: Dependency[] = [];
-    let fn: () => void;
-
-    if (typeof fnOrDeps === "function") {
-      fn = fnOrDeps;
-    } else {
-      dependencies = fnOrDeps!;
-      fn = maybeFn!;
-    }
-
-    const target = new TargetImpl(name, dependencies, this);
+    const target = new TargetImpl(name, this);
     this.targets.set(name, target);
-
-    // Execute the target definition function with this target as context
-    setCurrentTarget(target);
-    try {
-      fn();
-    } finally {
-      setCurrentTarget(null);
-    }
-
-    // Return the project for chaining
-    return this;
+    return target;
   }
 
   /**
@@ -71,7 +46,9 @@ export class ProjectImpl implements Project {
   async execute(targetName: string): Promise<void> {
     const target = this.targets.get(targetName);
     if (!target) {
-      throw new Error(`Target "${targetName}" not found in project "${this.name}"`);
+      throw new Error(
+        `Target "${targetName}" not found in project "${this.name}"`
+      );
     }
 
     const executedTargets = new Set<string>();
@@ -83,7 +60,12 @@ export class ProjectImpl implements Project {
       await this.executeProjectDeps(depProject, executedProjects, inProgress);
     }
 
-    await this.executeTargetWithDeps(target, executedTargets, executedProjects, inProgress);
+    await this.executeTargetWithDeps(
+      target,
+      executedTargets,
+      executedProjects,
+      inProgress
+    );
   }
 
   /**
@@ -142,7 +124,12 @@ export class ProjectImpl implements Project {
 
     // Execute dependencies first
     for (const dep of target.dependencies) {
-      await this.executeDependency(dep, executedTargets, executedProjects, inProgress);
+      await this.executeDependency(
+        dep,
+        executedTargets,
+        executedProjects,
+        inProgress
+      );
     }
 
     // Execute this target
@@ -152,7 +139,7 @@ export class ProjectImpl implements Project {
   }
 
   /**
-   * Execute a single dependency (can be string, Target, Project, or [Project, string])
+   * Execute a single dependency (can be string, Target, or Project)
    */
   private async executeDependency(
     dep: Dependency,
@@ -168,31 +155,14 @@ export class ProjectImpl implements Project {
           `Dependency "${dep}" not found in project "${this.name}"`
         );
       }
-      await this.executeTargetWithDeps(target, executedTargets, executedProjects, inProgress);
-    } else if (Array.isArray(dep)) {
-      // [Project, targetName] dependency
-      const [depProject, targetName] = dep;
-
-      // Execute the project's dependencies first
-      await this.executeProjectDeps(depProject, executedProjects, inProgress);
-
-      // Then execute the specific target
-      const target = depProject.targets.get(targetName);
-      if (!target) {
-        throw new Error(
-          `Target "${targetName}" not found in project "${depProject.name}"`
-        );
-      }
-
-      const targetKey = `${depProject.name}:${targetName}`;
-      if (!executedTargets.has(targetKey)) {
-        // Execute dependencies of that target in the context of the dependency project
-        if (depProject instanceof ProjectImpl) {
-          await depProject.executeTargetWithDeps(target, executedTargets, executedProjects, inProgress);
-        }
-      }
-    } else if ("dependencies" in dep && "tasks" in dep) {
-      // Target dependency
+      await this.executeTargetWithDeps(
+        target,
+        executedTargets,
+        executedProjects,
+        inProgress
+      );
+    } else if ("taskList" in dep && "dependencies" in dep) {
+      // Target dependency (has taskList and dependencies properties)
       const target = dep as Target;
       const depProject = target.project;
 
@@ -210,7 +180,12 @@ export class ProjectImpl implements Project {
       if (!executedTargets.has(targetKey)) {
         // Execute dependencies of that target in the context of the dependency project
         if (depProject instanceof ProjectImpl) {
-          await depProject.executeTargetWithDeps(target, executedTargets, executedProjects, inProgress);
+          await depProject.executeTargetWithDeps(
+            target,
+            executedTargets,
+            executedProjects,
+            inProgress
+          );
         }
       }
     } else {

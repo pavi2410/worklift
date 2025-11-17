@@ -1,0 +1,262 @@
+import { Task } from "./Task.ts";
+import { stat, exists } from "fs/promises";
+
+interface TaskNode {
+  task: Task;
+  index: number;
+  inputs: Set<string>;
+  outputs: Set<string>;
+  dependencies: Set<TaskNode>;
+  dependents: Set<TaskNode>;
+}
+
+/**
+ * Schedules and executes tasks in parallel based on their input/output dependencies
+ */
+export class TaskScheduler {
+  /**
+   * Execute a list of tasks with automatic parallelization and incremental builds
+   */
+  async executeTasks(tasks: Task[]): Promise<void> {
+    if (tasks.length === 0) return;
+
+    // Build dependency graph
+    const nodes = await this.buildDependencyGraph(tasks);
+
+    // Execute tasks in parallel waves
+    await this.executeInWaves(nodes);
+  }
+
+  /**
+   * Build a dependency graph from tasks based on their inputs and outputs
+   */
+  private async buildDependencyGraph(tasks: Task[]): Promise<TaskNode[]> {
+    // Create nodes with resolved paths
+    const nodes: TaskNode[] = await Promise.all(
+      tasks.map(async (task, index) => ({
+        task,
+        index,
+        inputs: new Set(await task.getResolvedInputs()),
+        outputs: new Set(await task.getResolvedOutputs()),
+        dependencies: new Set<TaskNode>(),
+        dependents: new Set<TaskNode>(),
+      }))
+    );
+
+    // Find dependencies between tasks
+    // Task B depends on Task A if any of A's outputs overlap with B's inputs
+    for (let i = 0; i < nodes.length; i++) {
+      const nodeA = nodes[i];
+      for (let j = i + 1; j < nodes.length; j++) {
+        const nodeB = nodes[j];
+
+        // Check if A's outputs overlap with B's inputs
+        const aToB = this.hasPathOverlap(nodeA.outputs, nodeB.inputs);
+        // Check if B's outputs overlap with A's inputs
+        const bToA = this.hasPathOverlap(nodeB.outputs, nodeA.inputs);
+
+        if (aToB && bToA) {
+          throw new Error(
+            `Circular dependency detected between tasks at index ${i} and ${j}: ` +
+              `both tasks read and write overlapping files`
+          );
+        }
+
+        if (aToB) {
+          // B depends on A
+          nodeB.dependencies.add(nodeA);
+          nodeA.dependents.add(nodeB);
+        } else if (bToA) {
+          // A depends on B
+          nodeA.dependencies.add(nodeB);
+          nodeB.dependents.add(nodeA);
+        }
+      }
+    }
+
+    // Check for circular dependencies
+    this.detectCircularDependencies(nodes);
+
+    return nodes;
+  }
+
+  /**
+   * Check if two sets of paths have any overlap
+   */
+  private hasPathOverlap(setA: Set<string>, setB: Set<string>): boolean {
+    for (const pathA of setA) {
+      for (const pathB of setB) {
+        if (this.pathsOverlap(pathA, pathB)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Check if two paths overlap (one contains the other)
+   */
+  private pathsOverlap(pathA: string, pathB: string): boolean {
+    // Normalize paths for comparison
+    const normalizedA = pathA.replace(/\\/g, "/");
+    const normalizedB = pathB.replace(/\\/g, "/");
+
+    // Check exact match
+    if (normalizedA === normalizedB) return true;
+
+    // Check if one is a parent directory of the other
+    return (
+      normalizedA.startsWith(normalizedB + "/") ||
+      normalizedB.startsWith(normalizedA + "/")
+    );
+  }
+
+  /**
+   * Detect circular dependencies in the task graph
+   */
+  private detectCircularDependencies(nodes: TaskNode[]): void {
+    const visiting = new Set<TaskNode>();
+    const visited = new Set<TaskNode>();
+
+    const visit = (node: TaskNode, path: number[]): void => {
+      if (visiting.has(node)) {
+        const cycle = [...path, node.index].join(" -> ");
+        throw new Error(`Circular dependency detected in task graph: ${cycle}`);
+      }
+
+      if (visited.has(node)) return;
+
+      visiting.add(node);
+
+      for (const dep of node.dependencies) {
+        visit(dep, [...path, node.index]);
+      }
+
+      visiting.delete(node);
+      visited.add(node);
+    };
+
+    for (const node of nodes) {
+      if (!visited.has(node)) {
+        visit(node, []);
+      }
+    }
+  }
+
+  /**
+   * Execute tasks in parallel waves based on their dependencies
+   */
+  private async executeInWaves(nodes: TaskNode[]): Promise<void> {
+    const completed = new Set<TaskNode>();
+    let wave = 0;
+
+    while (completed.size < nodes.length) {
+      // Find all tasks ready to execute (no pending dependencies)
+      const ready = nodes.filter(
+        (node) =>
+          !completed.has(node) &&
+          [...node.dependencies].every((dep) => completed.has(dep))
+      );
+
+      if (ready.length === 0) {
+        throw new Error(
+          "No tasks ready to execute - possible circular dependency"
+        );
+      }
+
+      wave++;
+      console.log(
+        `  Wave ${wave}: Executing ${ready.length} task(s) in parallel...`
+      );
+
+      // Execute all ready tasks in parallel
+      await Promise.all(
+        ready.map(async (node) => {
+          await this.executeTaskWithIncrementalBuild(node);
+          completed.add(node);
+        })
+      );
+    }
+  }
+
+  /**
+   * Execute a single task with incremental build support
+   */
+  private async executeTaskWithIncrementalBuild(node: TaskNode): Promise<void> {
+    const { task, inputs, outputs } = node;
+
+    // Check if task outputs are up-to-date
+    const upToDate = await this.isUpToDate(
+      Array.from(inputs),
+      Array.from(outputs)
+    );
+
+    if (upToDate) {
+      console.log(`  ↳ ${task.constructor.name}: Skipped (up-to-date)`);
+      return;
+    }
+
+    // Execute the task
+    await task.execute();
+  }
+
+  /**
+   * Check if outputs are up-to-date relative to inputs
+   */
+  private async isUpToDate(
+    inputs: string[],
+    outputs: string[]
+  ): Promise<boolean> {
+    // If no outputs specified, always run
+    if (outputs.length === 0) {
+      return false;
+    }
+
+    // Check if all outputs exist
+    const outputsExist = await Promise.all(outputs.map((o) => exists(o)));
+    if (outputsExist.some((e) => !e)) {
+      return false;
+    }
+
+    // If no inputs specified, but all outputs exist, consider up-to-date
+    if (inputs.length === 0) {
+      return true;
+    }
+
+    // Compare modification times
+    const latestInputTime = await this.getLatestModTime(inputs);
+    const earliestOutputTime = await this.getEarliestModTime(outputs);
+
+    return earliestOutputTime > latestInputTime;
+  }
+
+  /**
+   * Get the latest modification time from a list of paths
+   */
+  private async getLatestModTime(paths: string[]): Promise<number> {
+    const times = await Promise.all(paths.map((p) => this.getModTime(p)));
+    return Math.max(...times, 0);
+  }
+
+  /**
+   * Get the earliest modification time from a list of paths
+   */
+  private async getEarliestModTime(paths: string[]): Promise<number> {
+    const times = await Promise.all(paths.map((p) => this.getModTime(p)));
+    const nonZeroTimes = times.filter((t) => t > 0);
+    return nonZeroTimes.length > 0 ? Math.min(...nonZeroTimes) : 0;
+  }
+
+  /**
+   * Get the modification time of a file or directory
+   */
+  private async getModTime(path: string): Promise<number> {
+    try {
+      const stats = await stat(path);
+      return stats.mtimeMs;
+    } catch {
+      return 0;
+    }
+  }
+}
