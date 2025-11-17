@@ -9,7 +9,12 @@
  */
 
 import { project, artifact } from "@worklift/core";
-import { JavacTask, JavaTask, MavenDepTask } from "@worklift/java-tasks";
+import {
+  JavacTask,
+  JavaTask,
+  MavenDepTask,
+  MavenRepos,
+} from "@worklift/java-tasks";
 import { MkdirTask, DeleteTask } from "@worklift/file-tasks";
 import { z } from "zod";
 
@@ -38,6 +43,9 @@ const resolveDepsForCompile = app
   .target("resolve-deps-for-compile")
   .produces(compileClasspath) // Declare that this target produces the artifact
   .tasks([
+    // Resolve multiple dependencies in a single task
+    // .from() is optional - defaults to Maven Central
+    // .from([MavenRepos.CENTRAL, MavenRepos.GOOGLE]) for custom repos
     MavenDepTask.resolve(
       "org.json:json:20230227",
       "com.google.guava:guava:31.1-jre"
