@@ -16,31 +16,69 @@ export interface MavenCoordinates {
 }
 
 /**
- * Task for resolving Maven dependencies from Maven Central.
+ * Well-known Maven repositories
+ */
+export const MavenRepos = {
+  /** Maven Central Repository */
+  CENTRAL: "https://repo1.maven.org/maven2",
+  /** Google's Maven Repository */
+  GOOGLE: "https://maven.google.com",
+  /** JCenter (read-only, deprecated but still accessible) */
+  JCENTER: "https://jcenter.bintray.com",
+  /** Gradle Plugin Portal */
+  GRADLE_PLUGINS: "https://plugins.gradle.org/m2",
+  /** Spring Releases */
+  SPRING_RELEASE: "https://repo.spring.io/release",
+  /** Spring Milestones */
+  SPRING_MILESTONE: "https://repo.spring.io/milestone",
+  /** JBoss Public Repository */
+  JBOSS: "https://repository.jboss.org/nexus/content/groups/public",
+  /** Apache Snapshots */
+  APACHE_SNAPSHOTS: "https://repository.apache.org/content/repositories/snapshots",
+} as const;
+
+/**
+ * Default repositories to try (Maven Central only)
+ */
+export const DEFAULT_MAVEN_REPOS = [MavenRepos.CENTRAL];
+
+/**
+ * Task for resolving Maven dependencies from Maven repositories.
  *
  * Downloads JAR files to the local Maven repository (~/.m2/repository)
  * and provides their paths for use in compilation or runtime classpath.
  *
- * Supports outputting resolved paths to an Artifact for consumption by other tasks.
+ * Supports custom repository configuration and outputs to artifacts.
  *
  * @example
  * ```typescript
- * // Simple resolution
- * MavenDepTask.resolve("org.json:json:20230227", "commons-lang:commons-lang:2.6")
+ * // Simple resolution from Maven Central (default)
+ * MavenDepTask.resolve("org.json:json:20230227")
+ *
+ * // With custom repositories
+ * const repos = [MavenRepos.CENTRAL, MavenRepos.GOOGLE];
+ * MavenDepTask.resolve("com.android:android:4.1.1.4").from(repos)
  *
  * // With artifact output
  * const classpath = artifact("compile-classpath", z.array(z.string()));
- * MavenDepTask.resolve("org.json:json:20230227").into(classpath)
+ * MavenDepTask.resolve("org.json:json:20230227")
+ *   .from([MavenRepos.CENTRAL])
+ *   .into(classpath)
+ *
+ * // Programmatically create multiple tasks
+ * const deps = ["dep1:dep1:1.0", "dep2:dep2:2.0"];
+ * deps.map(d => MavenDepTask.resolve(d).from(repos).into(classpath))
  * ```
  */
 export class MavenDepTask extends Task {
   private coordinates: string[] = [];
   private outputArtifact?: Artifact<string[]>;
-  private mavenRepo: string;
+  private repositories: string[] = DEFAULT_MAVEN_REPOS;
+  private localRepo: string;
 
   constructor() {
     super();
-    this.mavenRepo = join(homedir(), ".m2", "repository");
+    this.localRepo = join(homedir(), ".m2", "repository");
   }
 
   /**
@@ -61,6 +99,31 @@ export class MavenDepTask extends Task {
     const task = new MavenDepTask();
     task.coordinates = coords;
     return task;
+  }
+
+  /**
+   * Specify Maven repositories to resolve dependencies from.
+   * Repositories are tried in order until a dependency is found.
+   *
+   * @param repos - Array of repository base URLs
+   * @returns This task for chaining
+   *
+   * @example
+   * ```typescript
+   * const repos = [MavenRepos.CENTRAL, MavenRepos.GOOGLE];
+   * MavenDepTask.resolve("com.android:android:4.1.1.4").from(repos)
+   *
+   * // Or with custom URLs
+   * const customRepos = [
+   *   "https://my-company.com/maven",
+   *   "https://repo1.maven.org/maven2"
+   * ];
+   * MavenDepTask.resolve("com.example:lib:1.0").from(customRepos)
+   * ```
+   */
+  from(repos: string[]): this {
+    this.repositories = repos;
+    return this;
   }
 
   /**
@@ -127,8 +190,9 @@ export class MavenDepTask extends Task {
   }
 
   /**
-   * Download a Maven dependency to the local repository
-   * Returns the path to the downloaded JAR file
+   * Download a Maven dependency to the local repository.
+   * Tries each configured repository in order until successful.
+   * Returns the path to the downloaded JAR file.
    */
   private async downloadDependency(coords: MavenCoordinates): Promise<string> {
     const { groupId, artifactId, version } = coords;
@@ -138,7 +202,7 @@ export class MavenDepTask extends Task {
     const groupPath = groupId.replace(/\./g, "/");
     const jarFileName = `${artifactId}-${version}.jar`;
     const localPath = join(
-      this.mavenRepo,
+      this.localRepo,
       groupPath,
       artifactId,
       version,
@@ -154,32 +218,43 @@ export class MavenDepTask extends Task {
       // Not cached, need to download
     }
 
-    // Build Maven Central URL
-    // Example: https://repo1.maven.org/maven2/org/json/json/20230227/json-20230227.jar
-    const url = `https://repo1.maven.org/maven2/${groupPath}/${artifactId}/${version}/${jarFileName}`;
-
     // Ensure directory exists
     await mkdir(dirname(localPath), { recursive: true });
 
-    // Download the JAR
-    console.log(`    Downloading from ${url}`);
-    const response = await fetch(url);
+    // Try each repository in order
+    const errors: string[] = [];
+    for (const repoUrl of this.repositories) {
+      try {
+        const url = `${repoUrl}/${groupPath}/${artifactId}/${version}/${jarFileName}`;
+        console.log(`    Downloading from ${url}`);
 
-    if (!response.ok) {
-      throw new Error(
-        `Failed to download ${groupId}:${artifactId}:${version} from Maven Central: ` +
-          `HTTP ${response.status} ${response.statusText}`
-      );
+        const response = await fetch(url);
+
+        if (!response.ok) {
+          errors.push(`${repoUrl}: HTTP ${response.status} ${response.statusText}`);
+          continue;
+        }
+
+        if (!response.body) {
+          errors.push(`${repoUrl}: No response body`);
+          continue;
+        }
+
+        // Stream the download to file
+        const fileStream = createWriteStream(localPath);
+        await pipeline(response.body as any, fileStream);
+
+        return localPath;
+      } catch (error) {
+        errors.push(`${repoUrl}: ${error instanceof Error ? error.message : String(error)}`);
+      }
     }
 
-    if (!response.body) {
-      throw new Error(`No response body for ${url}`);
-    }
-
-    // Stream the download to file
-    const fileStream = createWriteStream(localPath);
-    await pipeline(response.body as any, fileStream);
-
-    return localPath;
+    // All repositories failed
+    throw new Error(
+      `Failed to download ${groupId}:${artifactId}:${version} from any repository.\n` +
+      `Tried ${this.repositories.length} repositories:\n` +
+      errors.map(e => `  - ${e}`).join('\n')
+    );
   }
 }
