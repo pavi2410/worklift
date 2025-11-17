@@ -10,3 +10,4 @@ export { CreateFileTask } from "./CreateFileTask.ts";
 export { ZipTask } from "./ZipTask.ts";
 export { UnzipTask } from "./UnzipTask.ts";
 export { ExecTask } from "./ExecTask.ts";
+export { FileSet } from "./FileSet.ts";
