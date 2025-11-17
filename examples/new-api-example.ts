@@ -5,8 +5,8 @@
  * - Use class-based tasks with .tasks([...])
  */
 
-import { project } from "../src/index.ts";
-import { DeleteTask, ExecTask } from "../src/index.ts";
+import { project } from "worklift";
+import { DeleteTask, ExecTask } from "worklift";
 
 // Track execution for demo purposes
 const executionLog: string[] = [];

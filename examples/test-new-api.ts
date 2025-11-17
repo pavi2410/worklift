@@ -2,8 +2,8 @@
  * Test the class-based API features
  */
 
-import { project } from "../src/index.ts";
-import { ExecTask } from "../src/index.ts";
+import { project } from "worklift";
+import { ExecTask } from "worklift";
 
 const executionLog: string[] = [];
 

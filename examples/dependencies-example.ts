@@ -3,8 +3,8 @@
  * Shows the new export-based dependency system with class-based tasks
  */
 
-import { project } from "../src/index.ts";
-import { ExecTask, CopyTask, DeleteTask } from "../src/index.ts";
+import { project } from "worklift";
+import { ExecTask, CopyTask, DeleteTask } from "worklift";
 
 // Create a shared library project
 const sharedLib = project("shared-lib");

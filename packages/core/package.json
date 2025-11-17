@@ -1,0 +1,16 @@
+{
+  "name": "@worklift/core",
+  "version": "0.1.0",
+  "description": "Core functionality for Worklift build tool",
+  "module": "src/index.ts",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "glob": "^11.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0"
+  }
+}
