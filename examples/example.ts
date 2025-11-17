@@ -2,9 +2,9 @@
  * Example build script demonstrating Worklift usage with class-based tasks API
  */
 
-import { project } from "../src/index.ts";
-import { CopyTask, DeleteTask, MkdirTask, ExecTask } from "../src/index.ts";
-import { JavacTask, JarTask, JavaTask } from "../src/index.ts";
+import { project } from "worklift";
+import { CopyTask, DeleteTask, MkdirTask, ExecTask } from "worklift";
+import { JavacTask, JarTask, JavaTask } from "worklift";
 
 // Define a project with multiple targets using the new declarative API
 const app = project("app");

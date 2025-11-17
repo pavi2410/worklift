@@ -1,0 +1,16 @@
+{
+  "name": "@worklift/file-tasks",
+  "version": "0.1.0",
+  "description": "Common file and OS tasks for Worklift build tool",
+  "module": "src/index.ts",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@worklift/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0"
+  }
+}

@@ -2,8 +2,8 @@
  * Simple test to verify dependency system works correctly
  */
 
-import { project } from "../src/index.ts";
-import { ExecTask } from "../src/index.ts";
+import { project } from "worklift";
+import { ExecTask } from "worklift";
 
 // Track execution order
 const executionOrder: string[] = [];

@@ -1,12 +1,12 @@
 {
-  "name": "worklift",
+  "name": "worklift-monorepo",
   "version": "0.1.0",
   "description": "A modern build tool with TypeScript DSL - an alternative to Apache Ant",
-  "module": "src/index.ts",
   "type": "module",
-  "exports": {
-    ".": "./src/index.ts"
-  },
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "example": "bun run examples/example.ts"
   },
@@ -15,9 +15,7 @@
   },
   "devDependencies": {
     "@types/bun": "latest",
-    "@types/node": "^22.0.0"
-  },
-  "peerDependencies": {
+    "@types/node": "^22.0.0",
     "typescript": "^5"
   }
 }

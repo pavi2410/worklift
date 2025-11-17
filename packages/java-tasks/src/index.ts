@@ -1,0 +1,7 @@
+/**
+ * @worklift/java-tasks - Java build tasks
+ */
+
+export { JavacTask } from "./JavacTask.ts";
+export { JarTask } from "./JarTask.ts";
+export { JavaTask } from "./JavaTask.ts";

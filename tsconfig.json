@@ -24,6 +24,15 @@
     // Some stricter flags (disabled by default)
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "noPropertyAccessFromIndexSignature": false
+    "noPropertyAccessFromIndexSignature": false,
+
+    // Path mappings for workspace packages
+    "baseUrl": ".",
+    "paths": {
+      "worklift": ["./packages/worklift/src/index.ts"],
+      "@worklift/core": ["./packages/core/src/index.ts"],
+      "@worklift/file-tasks": ["./packages/file-tasks/src/index.ts"],
+      "@worklift/java-tasks": ["./packages/java-tasks/src/index.ts"]
+    }
   }
 }
