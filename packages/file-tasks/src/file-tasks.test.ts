@@ -82,6 +82,89 @@ describe("File Tasks", () => {
         .force(false);
       expect(task).toBeInstanceOf(CopyTask);
     });
+
+    test("flattens directory structure", async () => {
+      const srcDir = join(testDir, "src");
+      const destDir = join(testDir, "dest");
+
+      await mkdir(join(srcDir, "a", "b", "c"), { recursive: true });
+      await writeFile(join(srcDir, "a", "file1.txt"), "1");
+      await writeFile(join(srcDir, "a", "b", "file2.txt"), "2");
+      await writeFile(join(srcDir, "a", "b", "c", "file3.txt"), "3");
+
+      const task = CopyTask.from(join(srcDir, "**/*.txt"))
+        .to(destDir)
+        .flatten(true);
+      await task.execute();
+
+      expect(existsSync(join(destDir, "file1.txt"))).toBe(true);
+      expect(existsSync(join(destDir, "file2.txt"))).toBe(true);
+      expect(existsSync(join(destDir, "file3.txt"))).toBe(true);
+      expect(existsSync(join(destDir, "a"))).toBe(false);
+
+      const content1 = await readFile(join(destDir, "file1.txt"), "utf-8");
+      const content2 = await readFile(join(destDir, "file2.txt"), "utf-8");
+      const content3 = await readFile(join(destDir, "file3.txt"), "utf-8");
+      expect(content1).toBe("1");
+      expect(content2).toBe("2");
+      expect(content3).toBe("3");
+    });
+
+    test("flatten works with glob patterns", async () => {
+      const srcDir = join(testDir, "lib", "blockly", "media");
+      const destDir = join(testDir, "build", "assets");
+
+      await mkdir(join(srcDir, "icons"), { recursive: true });
+      await mkdir(join(srcDir, "sounds"), { recursive: true });
+      await writeFile(join(srcDir, "icons", "play.png"), "play icon");
+      await writeFile(join(srcDir, "sounds", "beep.mp3"), "beep sound");
+
+      const task = CopyTask.from(join(srcDir, "**/*"))
+        .to(destDir)
+        .flatten(true);
+      await task.execute();
+
+      expect(existsSync(join(destDir, "play.png"))).toBe(true);
+      expect(existsSync(join(destDir, "beep.mp3"))).toBe(true);
+      expect(existsSync(join(destDir, "icons"))).toBe(false);
+      expect(existsSync(join(destDir, "sounds"))).toBe(false);
+    });
+
+    test("flatten copies all files to single directory", async () => {
+      const srcDir = join(testDir, "src");
+      const destDir = join(testDir, "dest");
+
+      await mkdir(join(srcDir, "deeply", "nested", "path"), {
+        recursive: true,
+      });
+      await writeFile(join(srcDir, "deeply", "file1.txt"), "content1");
+      await writeFile(
+        join(srcDir, "deeply", "nested", "file2.txt"),
+        "content2"
+      );
+      await writeFile(
+        join(srcDir, "deeply", "nested", "path", "file3.txt"),
+        "content3"
+      );
+
+      const task = CopyTask.from(join(srcDir, "**/*.txt"))
+        .to(destDir)
+        .flatten(true);
+      await task.execute();
+
+      // All files should be in the root of destDir
+      expect(existsSync(join(destDir, "file1.txt"))).toBe(true);
+      expect(existsSync(join(destDir, "file2.txt"))).toBe(true);
+      expect(existsSync(join(destDir, "file3.txt"))).toBe(true);
+
+      // Directory structure should not be preserved
+      expect(existsSync(join(destDir, "deeply"))).toBe(false);
+    });
+
+    test("flatten supports method chaining", () => {
+      const task = CopyTask.from("src/**/*").to("dist").flatten(true);
+      expect(task).toBeInstanceOf(CopyTask);
+    });
   });
 
   describe("MkdirTask", () => {
