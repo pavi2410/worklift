@@ -12,6 +12,7 @@ export class CopyTask extends Task {
   private toPath?: string;
   private recursiveFlag = true;
   private forceFlag = true;
+  private includePatterns: string[] = [];
   private excludePatterns: string[] = [];
 
   inputs?: string | string[];
@@ -40,6 +41,11 @@ export class CopyTask extends Task {
     return this;
   }
 
+  include(...patterns: string[]): this {
+    this.includePatterns.push(...patterns);
+    return this;
+  }
+
   exclude(...patterns: string[]): this {
     this.excludePatterns.push(...patterns);
     return this;
@@ -57,19 +63,19 @@ export class CopyTask extends Task {
   async execute() {
     console.log(`  ↳ Copying ${this.fromPath} to ${this.toPath}`);
 
-    if (this.excludePatterns.length === 0) {
+    if (this.includePatterns.length === 0 && this.excludePatterns.length === 0) {
       // Fast path: no filtering needed
       await cp(this.fromPath!, this.toPath!, {
         recursive: this.recursiveFlag,
         force: this.forceFlag,
       });
     } else {
-      // Need to filter excluded files
-      await this.copyWithExcludes();
+      // Need to filter files based on include/exclude patterns
+      await this.copyWithFilters();
     }
   }
 
-  private async copyWithExcludes() {
+  private async copyWithFilters() {
     const { readdir, stat, mkdir, copyFile } = await import("fs/promises");
 
     // Get all files to copy
@@ -78,10 +84,10 @@ export class CopyTask extends Task {
       dot: true,
     });
 
-    // Filter out excluded files
+    // Filter files based on include/exclude patterns
     const filesToCopy = allFiles.filter(file => {
       const relativePath = relative(this.fromPath!, file);
-      return !this.isExcluded(relativePath);
+      return this.shouldIncludeFile(relativePath);
     });
 
     // Copy each file
@@ -99,9 +105,21 @@ export class CopyTask extends Task {
     }
   }
 
-  private isExcluded(relativePath: string): boolean {
-    return this.excludePatterns.some(pattern =>
+  private shouldIncludeFile(relativePath: string): boolean {
+    // If include patterns are specified, file must match at least one
+    if (this.includePatterns.length > 0) {
+      const matchesInclude = this.includePatterns.some(pattern =>
+        minimatch(relativePath, pattern)
+      );
+      if (!matchesInclude) {
+        return false;
+      }
+    }
+
+    // File must not match any exclude patterns
+    const matchesExclude = this.excludePatterns.some(pattern =>
       minimatch(relativePath, pattern)
     );
+    return !matchesExclude;
   }
 }
