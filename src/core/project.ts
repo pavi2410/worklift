@@ -1,5 +1,5 @@
-import type { Project, Target, Dependency, ProjectOptions } from "./types.ts";
-import { setCurrentProject, setCurrentTarget, projects } from "./types.ts";
+import type { Project, Target, Dependency } from "./types.ts";
+import { setCurrentTarget, projects } from "./types.ts";
 import { TargetImpl } from "./target.ts";
 
 /**
@@ -26,7 +26,10 @@ export class ProjectImpl implements Project {
   /**
    * Define a new target or get an existing target reference
    */
-  target(name: string, fnOrDeps?: Dependency[] | (() => void), maybeFn?: () => void): Target {
+  target(name: string): Target;
+  target(name: string, fn: () => void): Project;
+  target(name: string, dependencies: Dependency[], fn: () => void): Project;
+  target(name: string, fnOrDeps?: Dependency[] | (() => void), maybeFn?: () => void): Target | Project {
     // If only name is provided, get the target reference
     if (fnOrDeps === undefined && maybeFn === undefined) {
       const target = this.targets.get(name);
@@ -58,7 +61,8 @@ export class ProjectImpl implements Project {
       setCurrentTarget(null);
     }
 
-    return target;
+    // Return the project for chaining
+    return this;
   }
 
   /**
@@ -219,46 +223,7 @@ export class ProjectImpl implements Project {
 /**
  * Create a new project
  */
-export function project(options: ProjectOptions, fn: (p: Project) => void): Project;
-export function project(name: string, fn: (p: Project) => void): Project;
-export function project(
-  nameOrOptions: string | ProjectOptions,
-  fn: (p: Project) => void
-): Project {
-  // Parse options
-  let name: string;
-  let dependencies: Dependency[] = [];
-
-  if (typeof nameOrOptions === "string") {
-    name = nameOrOptions;
-  } else {
-    name = nameOrOptions.name;
-    dependencies = nameOrOptions.dependsOn || [];
-  }
-
+export function project(name: string): Project {
   const proj = new ProjectImpl(name);
-
-  // Process dependencies
-  for (const dep of dependencies) {
-    if (typeof dep === "string") {
-      throw new Error(
-        `String dependencies not allowed in project options. Use project references or [project, "target"] tuples.`
-      );
-    } else if (Array.isArray(dep)) {
-      // [Project, targetName] - add the project as a dependency
-      proj.dependencies.push(dep[0]);
-    } else {
-      // Project dependency
-      proj.dependencies.push(dep);
-    }
-  }
-
-  setCurrentProject(proj);
-  try {
-    fn(proj);
-  } finally {
-    setCurrentProject(null);
-  }
-
   return proj;
 }

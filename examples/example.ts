@@ -7,64 +7,57 @@ import { copyFile, mkdir, deleteFile, exec } from "../src/common/index.ts";
 import { javac, jar, java } from "../src/java/index.ts";
 
 // Define a project with multiple targets
-const app = project("app", (p) => {
+const app = project("app")
   // Clean target - removes build artifacts
-  p.target("clean", () => {
+  .target("clean", () => {
     deleteFile({
       paths: ["build", "dist"],
     });
-  });
-
+  })
   // Init target - creates necessary directories
-  p.target("init", ["clean"], () => {
+  .target("init", ["clean"], () => {
     mkdir({
       paths: ["build/classes", "dist"],
     });
-  });
-
+  })
   // Compile target - compiles Java source files
-  p.target("compile", ["init"], () => {
+  .target("compile", ["init"], () => {
     javac({
       srcFiles: ["src/**/*.java"], // Would need actual Java files
       destDir: "build/classes",
       source: "11",
       target: "11",
     });
-  });
-
+  })
   // Package target - creates a JAR file
-  p.target("package", ["compile"], () => {
+  .target("package", ["compile"], () => {
     jar({
       jarFile: "dist/app.jar",
       baseDir: "build/classes",
       mainClass: "com.example.Main",
     });
-  });
-
+  })
   // Build target - full build process
-  p.target("build", ["package"], () => {
+  .target("build", ["package"], () => {
     copyFile({
       from: ["README.md", "LICENSE"],
       to: "dist/",
     });
-  });
-
+  })
   // Run target - runs the application
-  p.target("run", ["build"], () => {
+  .target("run", ["build"], () => {
     java({
       jar: "dist/app.jar",
     });
-  });
-
+  })
   // Test target - runs tests
-  p.target("test", ["compile"], () => {
+  .target("test", ["compile"], () => {
     exec({
       command: "echo",
       args: ["Running tests..."],
     });
     // In a real project, you would run JUnit or other test frameworks
   });
-});
 
 // Execute the build target
 console.log("=== Worklift Build Tool ===\n");

@@ -55,16 +55,6 @@ export interface Target {
 }
 
 /**
- * Options for creating a project
- */
-export interface ProjectOptions {
-  /** Project name */
-  name: string;
-  /** Dependencies on other projects or targets */
-  dependsOn?: Dependency[];
-}
-
-/**
  * A project contains multiple targets
  */
 export interface Project {
@@ -76,10 +66,10 @@ export interface Project {
   targets: Map<string, Target>;
   /** Get a target reference by name */
   target(name: string): Target;
-  /** Define a new target */
-  target(name: string, fn: () => void): Target;
-  /** Define a new target with dependencies */
-  target(name: string, dependencies: Dependency[], fn: () => void): Target;
+  /** Define a new target (returns Project for chaining) */
+  target(name: string, fn: () => void): Project;
+  /** Define a new target with dependencies (returns Project for chaining) */
+  target(name: string, dependencies: Dependency[], fn: () => void): Project;
   /** Execute a target by name */
   execute(targetName: string): Promise<void>;
   /** Add a project dependency */
@@ -90,18 +80,6 @@ export interface Project {
  * Global registry of projects
  */
 export const projects = new Map<string, Project>();
-
-/**
- * Currently active project (for task registration)
- */
-export let currentProject: Project | null = null;
-
-/**
- * Set the current project
- */
-export function setCurrentProject(project: Project | null) {
-  currentProject = project;
-}
 
 /**
  * Currently active target (for task registration)
