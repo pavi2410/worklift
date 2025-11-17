@@ -223,9 +223,9 @@ describe("File Tasks", () => {
       expect(task).toBeInstanceOf(DeleteTask);
     });
 
-    test("validates paths parameter is required", () => {
+    test("validates paths or patterns parameter is required", () => {
       const task = new DeleteTask();
-      expect(() => task.validate()).toThrow("DeleteTask: 'paths' is required");
+      expect(() => task.validate()).toThrow("DeleteTask: 'paths' or 'patterns' is required");
     });
 
     test("deletes a single file", async () => {
