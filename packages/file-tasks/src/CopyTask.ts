@@ -2,11 +2,11 @@ import { Task } from "@worklift/core";
 import { cp, mkdir, copyFile } from "fs/promises";
 import { basename, relative, join, dirname } from "path";
 import { glob } from "glob";
-import { minimatch } from "minimatch";
 import { FileSet } from "./FileSet.ts";
 
 /**
- * Task for copying files or directories
+ * Task for copying files or directories.
+ * Use FileSet for advanced file selection with include/exclude patterns.
  */
 export class CopyTask extends Task {
   private fromPath?: string;
@@ -15,8 +15,6 @@ export class CopyTask extends Task {
   private recursiveFlag = true;
   private forceFlag = true;
   private flattenFlag = false;
-  private includePatterns: string[] = [];
-  private excludePatterns: string[] = [];
   private renamePattern?: RegExp;
   private renameReplacement?: string;
 
@@ -57,16 +55,6 @@ export class CopyTask extends Task {
     return this;
   }
 
-  include(...patterns: string[]): this {
-    this.includePatterns.push(...patterns);
-    return this;
-  }
-
-  exclude(...patterns: string[]): this {
-    this.excludePatterns.push(...patterns);
-    return this;
-  }
-
   rename(pattern: RegExp, replacement: string): this {
     this.renamePattern = pattern;
     this.renameReplacement = replacement;
@@ -90,19 +78,15 @@ export class CopyTask extends Task {
       console.log(`  ↳ Copying ${this.fromPath} to ${this.toPath}`);
 
       if (this.renamePattern) {
-        // Need to rename files during copy
         await this.copyWithRename();
       } else if (this.flattenFlag) {
         await this.copyFlattened();
-      } else if (this.includePatterns.length === 0 && this.excludePatterns.length === 0) {
-        // Fast path: no filtering needed
+      } else {
+        // Simple copy
         await cp(this.fromPath!, this.toPath!, {
           recursive: this.recursiveFlag,
           force: this.forceFlag,
         });
-      } else {
-        // Need to filter files based on include/exclude patterns
-        await this.copyWithFilters();
       }
     }
   }
@@ -125,38 +109,8 @@ export class CopyTask extends Task {
     }
   }
 
-  private async copyWithFilters() {
-    const { readdir, stat, mkdir, copyFile } = await import("fs/promises");
-
-    // Get all files to copy
-    const allFiles = await glob(`${this.fromPath}/**/*`, {
-      nodir: false,
-      dot: true,
-    });
-
-    // Filter files based on include/exclude patterns
-    const filesToCopy = allFiles.filter(file => {
-      const relativePath = relative(this.fromPath!, file);
-      return this.shouldIncludeFile(relativePath);
-    });
-
-    // Copy each file
-    for (const srcFile of filesToCopy) {
-      const relativePath = relative(this.fromPath!, srcFile);
-      const destFile = join(this.toPath!, relativePath);
-
-      const stats = await stat(srcFile);
-      if (stats.isDirectory()) {
-        await mkdir(destFile, { recursive: true });
-      } else {
-        await mkdir(dirname(destFile), { recursive: true });
-        await copyFile(srcFile, destFile);
-      }
-    }
-  }
-
   private async copyWithRename() {
-    const { basename, dirname: pathDirname, resolve } = await import("path");
+    const { basename, dirname: pathDirname } = await import("path");
     const { mkdir, copyFile } = await import("fs/promises");
 
     // Determine if fromPath is a glob pattern or a directory
@@ -181,11 +135,6 @@ export class CopyTask extends Task {
     for (const srcFile of allFiles) {
       // Calculate relative path from base directory
       const relativeFromBase = relative(baseDir, srcFile);
-
-      // Check if file should be included based on include/exclude patterns
-      if (!this.shouldIncludeFile(relativeFromBase)) {
-        continue;
-      }
 
       // Apply rename pattern to the filename
       const filename = basename(srcFile);
@@ -213,31 +162,44 @@ export class CopyTask extends Task {
     }
   }
 
-  private shouldIncludeFile(relativePath: string): boolean {
-    // If include patterns are specified, file must match at least one
-    if (this.includePatterns.length > 0) {
-      const matchesInclude = this.includePatterns.some(pattern =>
-        minimatch(relativePath, pattern)
-      );
-      if (!matchesInclude) {
-        return false;
-      }
-    }
-
-    // File must not match any exclude patterns
-    const matchesExclude = this.excludePatterns.some(pattern =>
-      minimatch(relativePath, pattern)
-    );
-    return !matchesExclude;
-  }
-
   private async copyFromFileSet() {
     const files = await this.fileSet!.resolve();
     const baseDir = this.fileSet!.getBaseDir();
 
     for (const file of files) {
       const relativePath = relative(baseDir, file);
-      const destPath = join(this.toPath!, relativePath);
+      let destPath: string;
+
+      if (this.flattenFlag) {
+        // Flatten: copy all files to destination root
+        let filename = basename(file);
+
+        // Apply rename if specified
+        if (this.renamePattern) {
+          filename = filename.replace(this.renamePattern, this.renameReplacement!);
+        }
+
+        destPath = join(this.toPath!, filename);
+      } else {
+        // Preserve directory structure
+        if (this.renamePattern) {
+          // Apply rename to filename while preserving directory structure
+          const filename = basename(file);
+          const newFilename = filename.replace(this.renamePattern, this.renameReplacement!);
+          const relativeDir = dirname(relativePath);
+
+          destPath = relativeDir === "." || relativeDir === ""
+            ? join(this.toPath!, newFilename)
+            : join(this.toPath!, relativeDir, newFilename);
+
+          // Log rename if filename changed
+          if (newFilename !== filename) {
+            console.log(`    ${filename} → ${newFilename}`);
+          }
+        } else {
+          destPath = join(this.toPath!, relativePath);
+        }
+      }
 
       await mkdir(dirname(destPath), { recursive: true });
       await copyFile(file, destPath);

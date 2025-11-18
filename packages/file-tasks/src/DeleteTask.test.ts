@@ -113,7 +113,7 @@ describe("DeleteTask with patterns", () => {
     const task = new DeleteTask();
 
     expect(() => task.validate()).toThrow(
-      "DeleteTask: 'paths' or 'patterns' is required"
+      "DeleteTask: 'paths', 'patterns', or 'files' is required"
     );
   });
 });

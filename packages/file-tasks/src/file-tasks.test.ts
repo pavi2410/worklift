@@ -225,7 +225,7 @@ describe("File Tasks", () => {
 
     test("validates paths or patterns parameter is required", () => {
       const task = new DeleteTask();
-      expect(() => task.validate()).toThrow("DeleteTask: 'paths' or 'patterns' is required");
+      expect(() => task.validate()).toThrow("DeleteTask: 'paths', 'patterns', or 'files' is required");
     });
 
     test("deletes a single file", async () => {
@@ -277,7 +277,7 @@ describe("File Tasks", () => {
 
     test("validates from parameter is required", () => {
       const task = new MoveTask();
-      expect(() => task.validate()).toThrow("MoveTask: 'from' is required");
+      expect(() => task.validate()).toThrow("MoveTask: 'from' or 'files' is required");
     });
 
     test("validates to parameter is required", () => {
