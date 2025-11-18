@@ -64,7 +64,6 @@ export class DeleteTask extends Task {
   async execute() {
     // Delete explicit paths
     if (this.pathList && this.pathList.length > 0) {
-      console.log(`  ↳ Deleting ${this.pathList.length} item(s)`);
       for (const path of this.pathList) {
         await rm(path, { recursive: this.recursiveFlag, force: true });
       }
@@ -91,7 +90,6 @@ export class DeleteTask extends Task {
         absolute: true,
       });
 
-      console.log(`  ↳ Deleting ${matches.length} file(s) matching ${pattern}`);
 
       for (const file of matches) {
         await rm(file, {
@@ -104,7 +102,6 @@ export class DeleteTask extends Task {
 
   private async deleteFromFileSet() {
     const files = await this.fileSet!.resolve();
-    console.log(`  ↳ Deleting ${files.length} file(s) from FileSet`);
 
     for (const file of files) {
       await rm(file, {

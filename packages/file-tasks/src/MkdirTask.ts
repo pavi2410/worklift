@@ -24,7 +24,6 @@ export class MkdirTask extends Task {
   }
 
   async execute() {
-    console.log(`  ↳ Creating ${this.pathList!.length} director(ies)`);
     for (const path of this.pathList!) {
       await mkdir(path, { recursive: true });
     }

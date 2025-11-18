@@ -1,0 +1,21 @@
+{
+  "name": "@worklift/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "CLI for Worklift build tool",
+  "bin": {
+    "worklift": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "@worklift/core": "workspace:*",
+    "commander": "^12.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5"
+  }
+}

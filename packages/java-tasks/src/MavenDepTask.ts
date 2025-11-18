@@ -161,7 +161,6 @@ export class MavenDepTask extends Task {
   }
 
   async execute(): Promise<void> {
-    console.log(`  ↳ Resolving ${this.coordinates.length} Maven dependencies`);
 
     const resolvedPaths: string[] = [];
 
@@ -169,7 +168,6 @@ export class MavenDepTask extends Task {
       const coordinates = this.parseCoordinates(coord);
       const jarPath = await this.downloadDependency(coordinates);
       resolvedPaths.push(jarPath);
-      console.log(`    ✓ ${coord}`);
     }
 
     // Write to artifact if specified
@@ -212,7 +210,6 @@ export class MavenDepTask extends Task {
     // Check if already downloaded
     try {
       await access(localPath, constants.R_OK);
-      console.log(`    (cached) ${localPath}`);
       return localPath;
     } catch {
       // Not cached, need to download
@@ -226,7 +223,6 @@ export class MavenDepTask extends Task {
     for (const repoUrl of this.repositories) {
       try {
         const url = `${repoUrl}/${groupPath}/${artifactId}/${version}/${jarFileName}`;
-        console.log(`    Downloading from ${url}`);
 
         const response = await fetch(url);
 

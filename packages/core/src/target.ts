@@ -2,6 +2,7 @@ import type { Target, Dependency, Project } from "./types.ts";
 import type { Task } from "./Task.ts";
 import type { Artifact } from "./Artifact.ts";
 import { TaskScheduler } from "./TaskScheduler.ts";
+import { Logger } from "./logging/index.ts";
 
 /**
  * Implementation of a build target
@@ -58,21 +59,30 @@ export class TargetImpl implements Target {
    * Execute all tasks in this target with parallelization
    */
   async execute(): Promise<void> {
-    console.log(`[${this.name}] Executing target...`);
+    const logger = Logger.get();
+    const projectName = this.project?.name ?? "unknown";
+    const targetFullName = `${projectName}:${this.name}`;
 
-    if (this.taskList.length === 0) {
-      console.log(`[${this.name}] No tasks to execute`);
-      return;
-    }
+    // Push context for hierarchical logging
+    logger.pushContext({ projectName, targetName: this.name });
+
+    // Show target start
+    logger.info(`[${targetFullName}]`);
 
     try {
+      if (this.taskList.length === 0) {
+        logger.warn("  (no tasks)");
+        logger.popContext();
+        return;
+      }
+
       const scheduler = new TaskScheduler();
       await scheduler.executeTasks(this.taskList);
     } catch (error) {
-      console.error(`[${this.name}] Task failed:`, error);
+      logger.error("", error instanceof Error ? error : undefined);
       throw error;
+    } finally {
+      logger.popContext();
     }
-
-    console.log(`[${this.name}] Target completed successfully`);
   }
 }

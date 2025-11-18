@@ -4,12 +4,16 @@
   "description": "A modern build tool with TypeScript DSL - an alternative to Apache Ant",
   "module": "src/index.ts",
   "type": "module",
+  "bin": {
+    "worklift": "./bin/worklift.js"
+  },
   "exports": {
     ".": "./src/index.ts"
   },
   "dependencies": {
     "@worklift/core": "workspace:*",
     "@worklift/file-tasks": "workspace:*",
-    "@worklift/java-tasks": "workspace:*"
+    "@worklift/java-tasks": "workspace:*",
+    "@worklift/cli": "workspace:*"
   }
 }

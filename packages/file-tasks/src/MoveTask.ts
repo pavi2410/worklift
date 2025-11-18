@@ -51,10 +51,8 @@ export class MoveTask extends Task {
 
   async execute() {
     if (this.fileSet) {
-      console.log(`  ↳ Moving files from FileSet to ${this.toPath}`);
       await this.moveFromFileSet();
     } else {
-      console.log(`  ↳ Moving ${this.fromPath} to ${this.toPath}`);
       await rename(this.fromPath!, this.toPath!);
     }
   }

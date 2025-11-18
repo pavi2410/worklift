@@ -40,7 +40,6 @@ export class CreateFileTask extends Task {
   }
 
   async execute() {
-    console.log(`  ↳ Creating file ${this.filePath}`);
 
     // Ensure parent directory exists
     const dir = dirname(this.filePath!);

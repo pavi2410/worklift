@@ -1,4 +1,4 @@
-import { Task, Artifact } from "@worklift/core";
+import { Task, Artifact, ExternalCommandError } from "@worklift/core";
 import { spawn } from "child_process";
 import { delimiter } from "path";
 
@@ -134,7 +134,6 @@ export class JavacTask extends Task {
 
     args.push(...sources);
 
-    console.log(`  ↳ Compiling ${sources.length} Java file(s)`);
 
     return new Promise<void>((resolve, reject) => {
       const proc = spawn("javac", args, {
@@ -145,7 +144,11 @@ export class JavacTask extends Task {
         if (code === 0) {
           resolve();
         } else {
-          reject(new Error(`javac failed with exit code ${code}`));
+          reject(new ExternalCommandError(
+            `javac failed with exit code ${code}`,
+            "javac",
+            code ?? 1
+          ));
         }
       });
 

@@ -50,7 +50,6 @@ export class ZipTask extends Task {
   }
 
   async execute() {
-    console.log(`  ↳ Creating ZIP archive: ${this.zipFile}`);
 
     if (this.fileSet) {
       await this.zipFromFileSet();

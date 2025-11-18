@@ -42,7 +42,6 @@ export class ExecTask extends Task {
 
   async execute() {
     const cmdStr = `${this.cmd} ${this.argList.join(" ")}`.trim();
-    console.log(`  ↳ Executing: ${cmdStr}`);
 
     return new Promise<void>((resolve, reject) => {
       const proc = spawn(this.cmd!, this.argList, {

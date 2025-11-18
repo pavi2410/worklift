@@ -7,3 +7,6 @@ export { project } from "./project.ts";
 export type { Project, Target, Dependency } from "./types.ts";
 export { TaskScheduler } from "./TaskScheduler.ts";
 export { Artifact, artifact } from "./Artifact.ts";
+export { Logger, LogLevel, LogFormat, type LoggerOptions } from "./logging/index.ts";
+export { getProjectRegistry } from "./types.ts";
+export { ExternalCommandError } from "./errors.ts";
