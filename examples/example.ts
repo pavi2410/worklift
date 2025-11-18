@@ -1,13 +1,23 @@
 /**
  * Example build script demonstrating Worklift usage with class-based tasks API
+ *
+ * This example shows:
+ * - Project and target organization
+ * - Task dependencies
+ * - FileSet usage for advanced file selection
+ * - Common build operations
  */
 
 import { project } from "worklift";
-import { CopyTask, DeleteTask, MkdirTask, ExecTask } from "worklift";
+import { FileSet, CopyTask, DeleteTask, MkdirTask, ExecTask } from "worklift";
 import { JavacTask, JarTask, JavaTask } from "worklift";
 
 // Define a project with multiple targets using the new declarative API
 const app = project("app");
+
+// Define reusable FileSets for complex file operations
+const documentationFiles = FileSet.dir(".")
+  .include("README.md", "LICENSE", "CHANGELOG.md");
 
 // Clean target - removes build artifacts
 const clean = app.target("clean").tasks([
@@ -40,11 +50,12 @@ const packageTarget = app.target("package")
       .mainClass("com.example.Main"),
   ]);
 
-// Build target - full build process
+// Build target - full build process with FileSet example
 const build = app.target("build")
   .dependsOn(packageTarget)
   .tasks([
-    CopyTask.from("README.md").to("dist/"),
+    // Copy documentation files using FileSet
+    CopyTask.files(documentationFiles).to("dist/"),
     // Note: Multiple copy tasks can run in parallel if their inputs/outputs don't overlap
   ]);
 

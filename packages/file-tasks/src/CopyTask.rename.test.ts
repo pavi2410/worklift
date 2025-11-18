@@ -1,5 +1,6 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
 import { CopyTask } from "./CopyTask";
+import { FileSet } from "./FileSet";
 import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from "fs";
 
 describe("CopyTask rename", () => {
@@ -75,15 +76,15 @@ describe("CopyTask rename", () => {
     expect(existsSync("test-temp/build/subdir/file2.ts")).toBe(false);
   });
 
-  test("combines rename with include patterns", async () => {
+  test("combines rename with include patterns using FileSet", async () => {
     mkdirSync("test-temp/lib", { recursive: true });
     writeFileSync("test-temp/lib/lib-a-1.0.jar", "content a");
     writeFileSync("test-temp/lib/lib-b-2.0.jar", "content b");
     writeFileSync("test-temp/lib/readme.txt", "readme");
 
-    await CopyTask.from("test-temp/lib")
+    // Use glob pattern directly in from() for simple cases
+    await CopyTask.from("test-temp/lib/*.jar")
       .to("test-temp/build")
-      .include("**/*.jar")
       .rename(/^(.*)-[\d.]*\.jar$/, "$1.jar")
       .execute();
 
@@ -92,14 +93,18 @@ describe("CopyTask rename", () => {
     expect(existsSync("test-temp/build/readme.txt")).toBe(false);
   });
 
-  test("combines rename with exclude patterns", async () => {
+  test("combines rename with exclude patterns using FileSet", async () => {
     mkdirSync("test-temp/src/test", { recursive: true });
     writeFileSync("test-temp/src/app.ts", "app content");
     writeFileSync("test-temp/src/test/app.test.ts", "test content");
 
-    await CopyTask.from("test-temp/src/**/*.ts")
+    // Use FileSet for complex include/exclude scenarios
+    const fileSet = FileSet.dir("test-temp/src")
+      .include("**/*.ts")
+      .exclude("**/test/**");
+
+    await CopyTask.files(fileSet)
       .to("test-temp/build")
-      .exclude("**/test/**")
       .rename(/\.ts$/, ".js")
       .execute();
 

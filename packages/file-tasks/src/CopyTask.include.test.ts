@@ -1,8 +1,9 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
 import { CopyTask } from "./CopyTask";
+import { FileSet } from "./FileSet";
 import { mkdirSync, writeFileSync, rmSync, existsSync } from "fs";
 
-describe("CopyTask with includes", () => {
+describe("CopyTask with FileSet includes", () => {
   beforeEach(() => {
     mkdirSync("test-temp/src", { recursive: true });
     mkdirSync("test-temp/src/subdir");
@@ -21,10 +22,8 @@ describe("CopyTask with includes", () => {
   });
 
   test("includes only matching files", async () => {
-    await CopyTask.from("test-temp/src")
-      .to("test-temp/dest")
-      .include("**/*.ts")
-      .execute();
+    const fileSet = FileSet.dir("test-temp/src").include("**/*.ts");
+    await CopyTask.files(fileSet).to("test-temp/dest").execute();
 
     expect(existsSync("test-temp/dest/file1.txt")).toBe(false);
     expect(existsSync("test-temp/dest/file2.ts")).toBe(true);
@@ -33,10 +32,8 @@ describe("CopyTask with includes", () => {
   });
 
   test("includes multiple patterns", async () => {
-    await CopyTask.from("test-temp/src")
-      .to("test-temp/dest")
-      .include("**/*.ts", "**/*.js")
-      .execute();
+    const fileSet = FileSet.dir("test-temp/src").include("**/*.ts", "**/*.js");
+    await CopyTask.files(fileSet).to("test-temp/dest").execute();
 
     expect(existsSync("test-temp/dest/file1.txt")).toBe(false);
     expect(existsSync("test-temp/dest/file2.ts")).toBe(true);
@@ -46,11 +43,10 @@ describe("CopyTask with includes", () => {
   });
 
   test("includes with chained calls", async () => {
-    await CopyTask.from("test-temp/src")
-      .to("test-temp/dest")
+    const fileSet = FileSet.dir("test-temp/src")
       .include("**/*.ts")
-      .include("**/*.js")
-      .execute();
+      .include("**/*.js");
+    await CopyTask.files(fileSet).to("test-temp/dest").execute();
 
     expect(existsSync("test-temp/dest/file1.txt")).toBe(false);
     expect(existsSync("test-temp/dest/file2.ts")).toBe(true);
@@ -59,10 +55,8 @@ describe("CopyTask with includes", () => {
   });
 
   test("includes specific files", async () => {
-    await CopyTask.from("test-temp/src")
-      .to("test-temp/dest")
-      .include("file2.ts", "subdir/file5.txt")
-      .execute();
+    const fileSet = FileSet.dir("test-temp/src").include("file2.ts", "subdir/file5.txt");
+    await CopyTask.files(fileSet).to("test-temp/dest").execute();
 
     expect(existsSync("test-temp/dest/file1.txt")).toBe(false);
     expect(existsSync("test-temp/dest/file2.ts")).toBe(true);
@@ -72,10 +66,8 @@ describe("CopyTask with includes", () => {
   });
 
   test("includes from specific directory", async () => {
-    await CopyTask.from("test-temp/src")
-      .to("test-temp/dest")
-      .include("subdir/**")
-      .execute();
+    const fileSet = FileSet.dir("test-temp/src").include("subdir/**");
+    await CopyTask.files(fileSet).to("test-temp/dest").execute();
 
     expect(existsSync("test-temp/dest/file1.txt")).toBe(false);
     expect(existsSync("test-temp/dest/file2.ts")).toBe(false);
@@ -84,11 +76,10 @@ describe("CopyTask with includes", () => {
   });
 
   test("combines include and exclude patterns", async () => {
-    await CopyTask.from("test-temp/src")
-      .to("test-temp/dest")
+    const fileSet = FileSet.dir("test-temp/src")
       .include("**/*.txt")
-      .exclude("**/test/**")
-      .execute();
+      .exclude("**/test/**");
+    await CopyTask.files(fileSet).to("test-temp/dest").execute();
 
     expect(existsSync("test-temp/dest/file1.txt")).toBe(true);
     expect(existsSync("test-temp/dest/file2.ts")).toBe(false);
@@ -97,11 +88,10 @@ describe("CopyTask with includes", () => {
   });
 
   test("combines include and exclude with multiple patterns", async () => {
-    await CopyTask.from("test-temp/src")
-      .to("test-temp/dest")
+    const fileSet = FileSet.dir("test-temp/src")
       .include("**/*.ts", "**/*.js")
-      .exclude("**/subdir/**")
-      .execute();
+      .exclude("**/subdir/**");
+    await CopyTask.files(fileSet).to("test-temp/dest").execute();
 
     expect(existsSync("test-temp/dest/file1.txt")).toBe(false);
     expect(existsSync("test-temp/dest/file2.ts")).toBe(true);
@@ -110,22 +100,20 @@ describe("CopyTask with includes", () => {
   });
 
   test("exclude takes precedence over include", async () => {
-    await CopyTask.from("test-temp/src")
-      .to("test-temp/dest")
+    const fileSet = FileSet.dir("test-temp/src")
       .include("**/*.ts")
-      .exclude("**/*.ts")
-      .execute();
+      .exclude("**/*.ts");
+    await CopyTask.files(fileSet).to("test-temp/dest").execute();
 
     expect(existsSync("test-temp/dest/file2.ts")).toBe(false);
     expect(existsSync("test-temp/dest/subdir/file6.ts")).toBe(false);
   });
 
   test("works with all text files except backups", async () => {
-    await CopyTask.from("test-temp/src")
-      .to("test-temp/dest")
+    const fileSet = FileSet.dir("test-temp/src")
       .include("**/*.txt", "**/*.ts", "**/*.js")
-      .exclude("**/*.bak")
-      .execute();
+      .exclude("**/*.bak");
+    await CopyTask.files(fileSet).to("test-temp/dest").execute();
 
     expect(existsSync("test-temp/dest/file1.txt")).toBe(true);
     expect(existsSync("test-temp/dest/file2.ts")).toBe(true);

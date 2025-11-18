@@ -1,13 +1,16 @@
 import { Task } from "@worklift/core";
 import { rm } from "fs/promises";
 import { glob } from "glob";
+import { FileSet } from "./FileSet.ts";
 
 /**
- * Task for deleting files or directories
+ * Task for deleting files or directories.
+ * Use FileSet for complex file selection with include/exclude patterns.
  */
 export class DeleteTask extends Task {
   private pathList?: string[];
   private patternList?: string[];
+  private fileSet?: FileSet;
   private baseDirPath?: string;
   private recursiveFlag = true;
   private includeDirsFlag = false;
@@ -24,6 +27,12 @@ export class DeleteTask extends Task {
   static patterns(...patterns: string[]): DeleteTask {
     const task = new DeleteTask();
     task.patternList = patterns;
+    return task;
+  }
+
+  static files(fileSet: FileSet): DeleteTask {
+    const task = new DeleteTask();
+    task.fileSet = fileSet;
     return task;
   }
 
@@ -45,14 +54,15 @@ export class DeleteTask extends Task {
   validate() {
     if (
       (!this.pathList || this.pathList.length === 0) &&
-      (!this.patternList || this.patternList.length === 0)
+      (!this.patternList || this.patternList.length === 0) &&
+      !this.fileSet
     ) {
-      throw new Error("DeleteTask: 'paths' or 'patterns' is required");
+      throw new Error("DeleteTask: 'paths', 'patterns', or 'files' is required");
     }
   }
 
   async execute() {
-    // Delete explicit paths (existing behavior)
+    // Delete explicit paths
     if (this.pathList && this.pathList.length > 0) {
       console.log(`  ↳ Deleting ${this.pathList.length} item(s)`);
       for (const path of this.pathList) {
@@ -60,9 +70,14 @@ export class DeleteTask extends Task {
       }
     }
 
-    // Delete files matching patterns (new behavior)
+    // Delete files matching patterns
     if (this.patternList && this.patternList.length > 0) {
       await this.deleteMatchingPatterns();
+    }
+
+    // Delete files from FileSet
+    if (this.fileSet) {
+      await this.deleteFromFileSet();
     }
   }
 
@@ -84,6 +99,18 @@ export class DeleteTask extends Task {
           force: true,
         });
       }
+    }
+  }
+
+  private async deleteFromFileSet() {
+    const files = await this.fileSet!.resolve();
+    console.log(`  ↳ Deleting ${files.length} file(s) from FileSet`);
+
+    for (const file of files) {
+      await rm(file, {
+        recursive: this.recursiveFlag,
+        force: true,
+      });
     }
   }
 }
