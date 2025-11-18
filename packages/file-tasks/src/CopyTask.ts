@@ -71,14 +71,9 @@ export class CopyTask extends Task {
   }
 
   async execute() {
-    const logger = Logger.get();
-
     if (this.fileSet) {
-      logger.info(`  ↳ Copying files from FileSet to ${this.toPath}`);
       await this.copyFromFileSet();
     } else {
-      logger.info(`  ↳ Copying ${this.fromPath} to ${this.toPath}`);
-
       if (this.renamePattern) {
         await this.copyWithRename();
       } else if (this.flattenFlag) {

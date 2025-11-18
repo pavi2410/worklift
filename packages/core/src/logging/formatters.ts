@@ -1,13 +1,12 @@
 import { LogLevel, LogEntry, LogFormatter } from "./types.ts";
 
 /**
- * Simple format: [${targetName}] ${message}
+ * Simple format: ${message}
  * Used when --no-color or piping output
  */
 export class SimpleFormatter implements LogFormatter {
   format(entry: LogEntry): string {
-    const target = entry.targetName || "worklift";
-    return `[${target}] ${entry.message}`;
+    return entry.message;
   }
 
   supportsProgress(): boolean {
@@ -73,9 +72,8 @@ export class InteractiveFormatter implements LogFormatter {
 
   format(entry: LogEntry): string {
     const level = this.formatLevel(entry.level);
-    const target = entry.targetName ? this.colorCyan(`[${entry.targetName}]`) : "";
 
-    let output = `${level} ${target} ${entry.message}`;
+    let output = `${level} ${entry.message}`;
 
     if (entry.error) {
       output += "\n" + this.colorRed(entry.error.stack || entry.error.message);

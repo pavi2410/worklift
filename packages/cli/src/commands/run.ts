@@ -45,11 +45,13 @@ export async function runCommand(
     }
 
     // Execute each target
+    const buildStartTime = Date.now();
     for (const targetSpec of targets) {
       await executeTarget(targetSpec, registry, logger);
     }
+    const totalDuration = ((Date.now() - buildStartTime) / 1000).toFixed(2);
 
-    logger.info("✓ Build completed successfully");
+    console.log(`\n✓ Build completed successfully in ${totalDuration}s`);
     logger.shutdown();
     process.exit(0);
   } catch (error) {

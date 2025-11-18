@@ -190,7 +190,8 @@ export class TaskScheduler {
   private async executeTaskWithIncrementalBuild(node: TaskNode): Promise<void> {
     const logger = Logger.get();
     const { task, inputs, outputs } = node;
-    const taskId = `task-${task.constructor.name}-${Date.now()}`;
+    const taskName = task.constructor.name;
+    const startTime = Date.now();
 
     // Check if task outputs are up-to-date
     const upToDate = await this.isUpToDate(
@@ -199,19 +200,21 @@ export class TaskScheduler {
     );
 
     if (upToDate) {
-      logger.info(`  ↳ ${task.constructor.name}: Skipped (up-to-date)`);
+      logger.info(`  ↳ ${taskName} (skipped)`);
       return;
     }
 
-    // Start progress for this task
-    logger.startProgress(taskId, `${task.constructor.name}: Running...`);
+    // Show task starting
+    logger.debug(`  ↳ ${taskName}...`);
 
     try {
       // Execute the task
       await task.execute();
-      logger.completeProgress(taskId, `${task.constructor.name}: Done`);
+      const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+      logger.info(`  ↳ ${taskName} (${duration}s)`);
     } catch (error) {
-      logger.completeProgress(taskId, `${task.constructor.name}: Failed`);
+      const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+      logger.error(`  ↳ ${taskName} failed after ${duration}s`);
       throw error;
     }
   }

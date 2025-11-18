@@ -61,18 +61,18 @@ export class TargetImpl implements Target {
   async execute(): Promise<void> {
     const logger = Logger.get();
     const projectName = this.project?.name ?? "unknown";
+    const targetFullName = `${projectName}:${this.name}`;
+    const startTime = Date.now();
 
     // Push context for hierarchical logging
     logger.pushContext({ projectName, targetName: this.name });
 
-    // Interactive: start progress
-    const progressId = `${projectName}:${this.name}`;
-    logger.startProgress(progressId, "Starting...");
+    // Show target start
+    logger.info(`[${targetFullName}]`);
 
     try {
       if (this.taskList.length === 0) {
-        logger.warn("No tasks to execute");
-        logger.completeProgress(progressId, "No tasks");
+        logger.warn("  (no tasks)");
         logger.popContext();
         return;
       }
@@ -80,11 +80,11 @@ export class TargetImpl implements Target {
       const scheduler = new TaskScheduler();
       await scheduler.executeTasks(this.taskList);
 
-      logger.completeProgress(progressId, "Completed");
-      logger.info("✓ Completed");
+      const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+      logger.info(`  ✓ Completed in ${duration}s`);
     } catch (error) {
-      logger.completeProgress(progressId, "Failed");
-      logger.error("Task failed", error instanceof Error ? error : undefined);
+      const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+      logger.error(`  ✗ Failed after ${duration}s`, error instanceof Error ? error : undefined);
       throw error;
     } finally {
       logger.popContext();

@@ -19,27 +19,27 @@ export async function listCommand(options: ListOptions): Promise<void> {
     const registry = getProjectRegistry();
 
     if (registry.size === 0) {
-      logger.info("No projects defined");
+      console.log("No projects defined");
       return;
     }
 
-    logger.info("\nProjects and Targets:\n");
+    console.log("\nProjects and Targets:\n");
 
     for (const [projectName, project] of registry) {
-      logger.info(`${projectName}:`);
+      console.log(`${projectName}:`);
 
       const targets = Array.from(project.targets.keys());
       if (targets.length === 0) {
-        logger.info("  (no targets)");
+        console.log("  (no targets)");
       } else {
         for (const targetName of targets) {
-          logger.info(`  - ${targetName}`);
+          console.log(`  - ${targetName}`);
         }
       }
-      logger.info("");
+      console.log("");
     }
   } catch (error) {
-    logger.error("Failed to list projects", error instanceof Error ? error : new Error(String(error)));
+    console.error("Failed to list projects");
     if (error instanceof Error && error.stack) {
       console.error(error.stack);
     }
