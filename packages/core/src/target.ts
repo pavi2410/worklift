@@ -62,7 +62,6 @@ export class TargetImpl implements Target {
     const logger = Logger.get();
     const projectName = this.project?.name ?? "unknown";
     const targetFullName = `${projectName}:${this.name}`;
-    const startTime = Date.now();
 
     // Push context for hierarchical logging
     logger.pushContext({ projectName, targetName: this.name });
@@ -79,12 +78,8 @@ export class TargetImpl implements Target {
 
       const scheduler = new TaskScheduler();
       await scheduler.executeTasks(this.taskList);
-
-      const duration = ((Date.now() - startTime) / 1000).toFixed(2);
-      logger.info(`  ✓ Completed in ${duration}s`);
     } catch (error) {
-      const duration = ((Date.now() - startTime) / 1000).toFixed(2);
-      logger.error(`  ✗ Failed after ${duration}s`, error instanceof Error ? error : undefined);
+      logger.error("", error instanceof Error ? error : undefined);
       throw error;
     } finally {
       logger.popContext();

@@ -40,7 +40,6 @@ export class UnzipTask extends Task {
   }
 
   async execute() {
-    console.log(`  ↳ Extracting ZIP archive: ${this.zipFile} to ${this.destDir}`);
 
     const args = ["-q"];
     if (this.overwriteFlag) {

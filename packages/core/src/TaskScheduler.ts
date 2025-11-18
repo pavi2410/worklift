@@ -200,21 +200,18 @@ export class TaskScheduler {
     );
 
     if (upToDate) {
-      logger.info(`  ↳ ${taskName} (skipped)`);
+      logger.info(`  - ${taskName} (skipped)`);
       return;
     }
-
-    // Show task starting
-    logger.debug(`  ↳ ${taskName}...`);
 
     try {
       // Execute the task
       await task.execute();
       const duration = ((Date.now() - startTime) / 1000).toFixed(2);
-      logger.info(`  ↳ ${taskName} (${duration}s)`);
+      logger.info(`  ✓ ${taskName} (${duration}s)`);
     } catch (error) {
       const duration = ((Date.now() - startTime) / 1000).toFixed(2);
-      logger.error(`  ↳ ${taskName} failed after ${duration}s`);
+      logger.error(`  ✗ ${taskName} (${duration}s)`);
       throw error;
     }
   }

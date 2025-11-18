@@ -110,7 +110,6 @@ export class JavaTask extends Task {
     // Add program args
     args.push(...this.programArgs);
 
-    console.log(`  ↳ Running Java: ${this.jarFile || this.mainClass}`);
 
     return new Promise<void>((resolve, reject) => {
       const proc = spawn("java", args, {

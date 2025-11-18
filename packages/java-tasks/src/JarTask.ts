@@ -68,7 +68,6 @@ export class JarTask extends Task {
 
     args.push("-C", this.baseDir!, ".");
 
-    console.log(`  ↳ Creating JAR: ${this.jarFile}`);
 
     return new Promise<void>((resolve, reject) => {
       const proc = spawn("jar", args, {

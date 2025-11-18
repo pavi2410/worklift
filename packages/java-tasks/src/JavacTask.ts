@@ -134,7 +134,6 @@ export class JavacTask extends Task {
 
     args.push(...sources);
 
-    console.log(`  ↳ Compiling ${sources.length} Java file(s)`);
 
     return new Promise<void>((resolve, reject) => {
       const proc = spawn("javac", args, {
