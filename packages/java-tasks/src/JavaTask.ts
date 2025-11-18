@@ -1,4 +1,4 @@
-import { Task, Artifact } from "@worklift/core";
+import { Task, Artifact, ExternalCommandError } from "@worklift/core";
 import { spawn } from "child_process";
 import { delimiter } from "path";
 
@@ -120,7 +120,11 @@ export class JavaTask extends Task {
         if (code === 0) {
           resolve();
         } else {
-          reject(new Error(`java failed with exit code ${code}`));
+          reject(new ExternalCommandError(
+            `java failed with exit code ${code}`,
+            "java",
+            code ?? 1
+          ));
         }
       });
 

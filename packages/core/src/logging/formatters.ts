@@ -1,4 +1,5 @@
 import { LogLevel, LogEntry, LogFormatter } from "./types.ts";
+import { ExternalCommandError } from "../errors.ts";
 
 /**
  * Simple format: ${message}
@@ -27,7 +28,12 @@ export class VerboseFormatter implements LogFormatter {
     let output = `${timestamp} [${level}] [${context}] ${entry.message}`;
 
     if (entry.error) {
-      output += "\n" + (entry.error.stack || entry.error.message);
+      // For external command errors, only show the message (no stacktrace)
+      if (entry.error instanceof ExternalCommandError) {
+        output += "\n" + entry.error.message;
+      } else {
+        output += "\n" + (entry.error.stack || entry.error.message);
+      }
     }
 
     return output;
@@ -76,7 +82,12 @@ export class InteractiveFormatter implements LogFormatter {
     let output = `${level} ${entry.message}`;
 
     if (entry.error) {
-      output += "\n" + this.colorRed(entry.error.stack || entry.error.message);
+      // For external command errors, only show the message (no stacktrace)
+      if (entry.error instanceof ExternalCommandError) {
+        output += "\n" + this.colorRed(entry.error.message);
+      } else {
+        output += "\n" + this.colorRed(entry.error.stack || entry.error.message);
+      }
     }
 
     return output;

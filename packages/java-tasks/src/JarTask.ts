@@ -1,4 +1,4 @@
-import { Task } from "@worklift/core";
+import { Task, ExternalCommandError } from "@worklift/core";
 import { spawn } from "child_process";
 import { writeFile } from "fs/promises";
 
@@ -78,7 +78,11 @@ export class JarTask extends Task {
         if (code === 0) {
           resolve();
         } else {
-          reject(new Error(`jar failed with exit code ${code}`));
+          reject(new ExternalCommandError(
+            `jar failed with exit code ${code}`,
+            "jar",
+            code ?? 1
+          ));
         }
       });
 
