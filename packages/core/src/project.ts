@@ -1,6 +1,7 @@
 import type { Project, Target, Dependency } from "./types.ts";
 import { projects } from "./types.ts";
 import { TargetImpl } from "./target.ts";
+import { Logger } from "./logging/index.ts";
 
 /**
  * Implementation of a build project
@@ -44,12 +45,16 @@ export class ProjectImpl implements Project {
    * Execute a target by name, including its dependencies
    */
   async execute(targetName: string): Promise<void> {
+    const logger = Logger.get();
+
     const target = this.targets.get(targetName);
     if (!target) {
       throw new Error(
         `Target "${targetName}" not found in project "${this.name}"`
       );
     }
+
+    logger.debug(`Executing target: ${this.name}:${targetName}`);
 
     const executedTargets = new Set<string>();
     const executedProjects = new Set<string>();
@@ -66,6 +71,8 @@ export class ProjectImpl implements Project {
       executedProjects,
       inProgress
     );
+
+    logger.debug(`Target completed: ${this.name}:${targetName}`);
   }
 
   /**

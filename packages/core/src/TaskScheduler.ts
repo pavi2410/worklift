@@ -1,5 +1,6 @@
 import { Task } from "./Task.ts";
 import { stat, exists } from "fs/promises";
+import { Logger } from "./logging/index.ts";
 
 interface TaskNode {
   task: Task;
@@ -18,11 +19,15 @@ export class TaskScheduler {
    * Execute a list of tasks with automatic parallelization and incremental builds
    */
   async executeTasks(tasks: Task[]): Promise<void> {
+    const logger = Logger.get();
+
     if (tasks.length === 0) return;
 
+    logger.debug("Building dependency graph...");
     // Build dependency graph
     const nodes = await this.buildDependencyGraph(tasks);
 
+    logger.debug(`Executing ${nodes.length} tasks`);
     // Execute tasks in parallel waves
     await this.executeInWaves(nodes);
   }
@@ -148,6 +153,7 @@ export class TaskScheduler {
    * Execute tasks in parallel waves based on their dependencies
    */
   private async executeInWaves(nodes: TaskNode[]): Promise<void> {
+    const logger = Logger.get();
     const completed = new Set<TaskNode>();
     let wave = 0;
 
@@ -166,9 +172,7 @@ export class TaskScheduler {
       }
 
       wave++;
-      console.log(
-        `  Wave ${wave}: Executing ${ready.length} task(s) in parallel...`
-      );
+      logger.debug(`Wave ${wave}: ${ready.length} task(s)`);
 
       // Execute all ready tasks in parallel
       await Promise.all(
@@ -184,7 +188,9 @@ export class TaskScheduler {
    * Execute a single task with incremental build support
    */
   private async executeTaskWithIncrementalBuild(node: TaskNode): Promise<void> {
+    const logger = Logger.get();
     const { task, inputs, outputs } = node;
+    const taskId = `task-${task.constructor.name}-${Date.now()}`;
 
     // Check if task outputs are up-to-date
     const upToDate = await this.isUpToDate(
@@ -193,12 +199,21 @@ export class TaskScheduler {
     );
 
     if (upToDate) {
-      console.log(`  ↳ ${task.constructor.name}: Skipped (up-to-date)`);
+      logger.info(`  ↳ ${task.constructor.name}: Skipped (up-to-date)`);
       return;
     }
 
-    // Execute the task
-    await task.execute();
+    // Start progress for this task
+    logger.startProgress(taskId, `${task.constructor.name}: Running...`);
+
+    try {
+      // Execute the task
+      await task.execute();
+      logger.completeProgress(taskId, `${task.constructor.name}: Done`);
+    } catch (error) {
+      logger.completeProgress(taskId, `${task.constructor.name}: Failed`);
+      throw error;
+    }
   }
 
   /**

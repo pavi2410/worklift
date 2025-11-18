@@ -17,6 +17,7 @@ export {
   ZipTask,
   UnzipTask,
   ExecTask,
+  FileSet,
 } from "@worklift/file-tasks";
 
 // Java task exports

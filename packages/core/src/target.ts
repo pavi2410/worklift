@@ -2,6 +2,7 @@ import type { Target, Dependency, Project } from "./types.ts";
 import type { Task } from "./Task.ts";
 import type { Artifact } from "./Artifact.ts";
 import { TaskScheduler } from "./TaskScheduler.ts";
+import { Logger } from "./logging/index.ts";
 
 /**
  * Implementation of a build target
@@ -58,21 +59,35 @@ export class TargetImpl implements Target {
    * Execute all tasks in this target with parallelization
    */
   async execute(): Promise<void> {
-    console.log(`[${this.name}] Executing target...`);
+    const logger = Logger.get();
+    const projectName = this.project?.name ?? "unknown";
 
-    if (this.taskList.length === 0) {
-      console.log(`[${this.name}] No tasks to execute`);
-      return;
-    }
+    // Push context for hierarchical logging
+    logger.pushContext({ projectName, targetName: this.name });
+
+    // Interactive: start progress
+    const progressId = `${projectName}:${this.name}`;
+    logger.startProgress(progressId, "Starting...");
 
     try {
+      if (this.taskList.length === 0) {
+        logger.warn("No tasks to execute");
+        logger.completeProgress(progressId, "No tasks");
+        logger.popContext();
+        return;
+      }
+
       const scheduler = new TaskScheduler();
       await scheduler.executeTasks(this.taskList);
-    } catch (error) {
-      console.error(`[${this.name}] Task failed:`, error);
-      throw error;
-    }
 
-    console.log(`[${this.name}] Target completed successfully`);
+      logger.completeProgress(progressId, "Completed");
+      logger.info("✓ Completed");
+    } catch (error) {
+      logger.completeProgress(progressId, "Failed");
+      logger.error("Task failed", error instanceof Error ? error : undefined);
+      throw error;
+    } finally {
+      logger.popContext();
+    }
   }
 }

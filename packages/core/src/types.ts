@@ -59,3 +59,10 @@ export interface Project {
  * Global registry of projects
  */
 export const projects = new Map<string, Project>();
+
+/**
+ * Get the global project registry
+ */
+export function getProjectRegistry(): Map<string, Project> {
+  return projects;
+}

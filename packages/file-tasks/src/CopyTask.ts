@@ -1,4 +1,4 @@
-import { Task } from "@worklift/core";
+import { Task, Logger } from "@worklift/core";
 import { cp, mkdir, copyFile } from "fs/promises";
 import { basename, relative, join, dirname } from "path";
 import { glob } from "glob";
@@ -71,11 +71,13 @@ export class CopyTask extends Task {
   }
 
   async execute() {
+    const logger = Logger.get();
+
     if (this.fileSet) {
-      console.log(`  ↳ Copying files from FileSet to ${this.toPath}`);
+      logger.info(`  ↳ Copying files from FileSet to ${this.toPath}`);
       await this.copyFromFileSet();
     } else {
-      console.log(`  ↳ Copying ${this.fromPath} to ${this.toPath}`);
+      logger.info(`  ↳ Copying ${this.fromPath} to ${this.toPath}`);
 
       if (this.renamePattern) {
         await this.copyWithRename();
@@ -157,7 +159,8 @@ export class CopyTask extends Task {
 
       // Log rename if filename changed
       if (newFilename !== filename) {
-        console.log(`    ${filename} → ${newFilename}`);
+        const logger = Logger.get();
+        logger.debug(`    ${filename} → ${newFilename}`);
       }
     }
   }
@@ -194,7 +197,8 @@ export class CopyTask extends Task {
 
           // Log rename if filename changed
           if (newFilename !== filename) {
-            console.log(`    ${filename} → ${newFilename}`);
+            const logger = Logger.get();
+            logger.debug(`    ${filename} → ${newFilename}`);
           }
         } else {
           destPath = join(this.toPath!, relativePath);
