@@ -190,22 +190,59 @@ import { project, Task } from "@worklift/core";
 
 ### @worklift/file-tasks
 
-Common file and OS operations:
+Common file and OS operations with FileSet support for advanced file selection:
+
+#### FileSet - Reusable File Collections
+
+FileSet provides a powerful way to define reusable file collections with include/exclude patterns:
+
+```typescript
+import { FileSet } from "worklift";
+
+// Define a file set
+const sourceFiles = FileSet.dir("src")
+  .include("**/*.ts")
+  .exclude("**/*.test.ts");
+
+// Combine multiple file sets
+const allSources = FileSet.union(
+  FileSet.dir("src").include("**/*.ts"),
+  FileSet.dir("lib").include("**/*.ts")
+);
+
+// Use with tasks
+CopyTask.files(sourceFiles).to("build");
+```
+
+#### File Tasks
 
 - **CopyTask**: Copy files or directories
-  - `CopyTask.from(path).to(destination).recursive(true).force(true)`
+  - Simple: `CopyTask.from("src").to("dest")`
+  - With FileSet: `CopyTask.files(fileSet).to("dest")`
+  - Options: `.recursive(true).force(true).flatten(true).rename(/\.ts$/, ".js")`
+
 - **MoveTask**: Move/rename files or directories
-  - `MoveTask.from(path).to(destination)`
+  - Simple: `MoveTask.from("old").to("new")`
+  - With FileSet: `MoveTask.files(fileSet).to("dest").flatten(true)`
+
 - **DeleteTask**: Delete files or directories
-  - `DeleteTask.paths(...paths).recursive(true)`
+  - Paths: `DeleteTask.paths("file1", "file2")`
+  - Patterns: `DeleteTask.patterns("**/*.tmp").baseDir("build")`
+  - FileSet: `DeleteTask.files(fileSet)`
+
+- **ZipTask**: Create ZIP archives
+  - Simple: `ZipTask.from("src").to("app.zip")`
+  - With FileSet: `ZipTask.files(fileSet).to("app.zip")`
+
 - **MkdirTask**: Create directories
   - `MkdirTask.paths(...paths)`
+
 - **CreateFileTask**: Create a file with content
   - `CreateFileTask.path(file).content(data).encoding('utf-8')`
-- **ZipTask**: Create ZIP archives
-  - `ZipTask.from(path).to(file).recursive(true)`
+
 - **UnzipTask**: Extract ZIP archives
   - `UnzipTask.file(path).to(dir).overwrite(true)`
+
 - **ExecTask**: Execute shell commands
   - `ExecTask.command(cmd).args([...]).cwd(dir).env({...})`
 
@@ -280,6 +317,104 @@ await app.execute("build");
 
 ```bash
 bun run example
+```
+
+## FileSet Examples
+
+FileSet provides a clean way to define reusable file collections for complex file operations:
+
+### Basic Usage
+
+```typescript
+import { FileSet, CopyTask, ZipTask, DeleteTask } from "worklift";
+
+// Define reusable file sets
+const sourceFiles = FileSet.dir("src")
+  .include("**/*.ts")
+  .exclude("**/*.test.ts");
+
+const resources = FileSet.dir("resources")
+  .include("**/*.json", "**/*.xml")
+  .exclude("**/temp/**");
+
+// Use with tasks
+const build = app.target("build").tasks([
+  CopyTask.files(sourceFiles).to("build/src"),
+  CopyTask.files(resources).to("build/resources"),
+]);
+```
+
+### Advanced Patterns
+
+```typescript
+// Runtime libraries (exclude test dependencies)
+const runtimeLibs = FileSet.dir("lib")
+  .include("**/*.jar")
+  .exclude("**/test/**", "**/*-test.jar");
+
+// Production resources only
+const prodResources = FileSet.dir("src")
+  .include("**/*.properties", "**/*.xml")
+  .exclude("**/dev/**", "**/*-local.*");
+
+// Combine multiple FileSets
+const allDocumentation = FileSet.union(
+  FileSet.dir("docs").include("**/*.md"),
+  FileSet.dir("api-docs").include("**/*.html"),
+  FileSet.dir(".").include("README.md", "LICENSE")
+);
+
+// Use with operations
+const package = app.target("package").tasks([
+  // Copy runtime libraries
+  CopyTask.files(runtimeLibs).to("dist/lib"),
+
+  // Create source archive with rename
+  CopyTask.files(sourceFiles)
+    .to("dist/sources")
+    .rename(/\.ts$/, ".js"),
+
+  // Zip documentation
+  ZipTask.files(allDocumentation).to("dist/docs.zip"),
+
+  // Clean temp files
+  DeleteTask.files(
+    FileSet.dir("build").include("**/*.tmp", "**/*.log")
+  ),
+]);
+```
+
+### Real-World Scenarios
+
+```typescript
+// Web application deployment
+const webApp = FileSet.dir("src")
+  .include("**/*.html", "**/*.css", "**/*.js")
+  .exclude("**/node_modules/**", "**/*.test.js");
+
+const webAssets = FileSet.dir("assets")
+  .include("**/*.png", "**/*.jpg", "**/*.svg")
+  .exclude("**/raw/**");  // Exclude source files
+
+const deploy = app.target("deploy").tasks([
+  CopyTask.files(webApp).to("dist/"),
+  CopyTask.files(webAssets).to("dist/assets").flatten(true),
+]);
+
+// JAR packaging with specific structure
+const classFiles = FileSet.dir("build/classes")
+  .include("**/*.class")
+  .exclude("**/test/**");
+
+const configFiles = FileSet.dir("config")
+  .include("**/*.xml", "**/*.properties");
+
+const packageJar = app.target("jar").tasks([
+  // Combine multiple FileSets into one JAR
+  CopyTask.files(classFiles).to("temp/jar-contents"),
+  CopyTask.files(configFiles).to("temp/jar-contents/META-INF"),
+  JarTask.from("temp/jar-contents").to("dist/app.jar"),
+]);
 ```
 
 ## Incremental Builds
