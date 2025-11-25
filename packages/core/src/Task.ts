@@ -1,4 +1,4 @@
-import { glob } from "glob";
+import { Glob } from "bun";
 import { resolve } from "path";
 import type { Artifact } from "./Artifact.ts";
 
@@ -80,11 +80,13 @@ export abstract class Task {
     for (const path of paths) {
       // Check if path contains glob pattern
       if (path.includes("*") || path.includes("?") || path.includes("[")) {
-        const matches = await glob(path, {
-          nodir: false,
+        const glob = new Glob(path);
+        for await (const match of glob.scan({
+          onlyFiles: false,
           absolute: true,
-        });
-        resolved.push(...matches);
+        })) {
+          resolved.push(match);
+        }
       } else {
         resolved.push(resolve(path));
       }

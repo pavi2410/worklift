@@ -1,6 +1,6 @@
 import { Task, FileSet } from "@worklift/core";
+import { Glob } from "bun";
 import { rm } from "fs/promises";
-import { glob } from "glob";
 
 /**
  * Configuration for DeleteTask
@@ -98,11 +98,15 @@ export class DeleteTask extends Task {
     const cwd = this.baseDirPath || process.cwd();
 
     for (const pattern of this.patternList!) {
-      const matches = await glob(pattern, {
+      const matches: string[] = [];
+      const globber = new Glob(pattern);
+      for await (const file of globber.scan({
         cwd,
-        nodir: !this.includeDirsFlag,
+        onlyFiles: !this.includeDirsFlag,
         absolute: true,
-      });
+      })) {
+        matches.push(file);
+      }
 
 
       for (const file of matches) {

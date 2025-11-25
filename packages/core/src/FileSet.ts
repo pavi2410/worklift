@@ -1,6 +1,5 @@
-import { glob } from "glob";
+import { Glob } from "bun";
 import { join, relative } from "path";
-import { minimatch } from "minimatch";
 
 /**
  * FileSet represents a reusable collection of files with include/exclude patterns.
@@ -109,21 +108,24 @@ export class FileSet {
 
     // Resolve all include patterns
     for (const pattern of patterns) {
-      const matches = await glob(pattern, {
+      const glob = new Glob(pattern);
+      for await (const file of glob.scan({
         cwd: this.baseDir,
-        nodir: true,
+        onlyFiles: true,
         absolute: true,
         dot: true,
-      });
-      allFiles.push(...matches);
+      })) {
+        allFiles.push(file);
+      }
     }
 
     // Filter out excluded files
     const filtered = allFiles.filter(file => {
       const relativePath = relative(this.baseDir, file);
-      return !this.excludePatterns.some(pattern =>
-        minimatch(relativePath, pattern)
-      );
+      return !this.excludePatterns.some(pattern => {
+        const glob = new Glob(pattern);
+        return glob.match(relativePath);
+      });
     });
 
     // Remove duplicates

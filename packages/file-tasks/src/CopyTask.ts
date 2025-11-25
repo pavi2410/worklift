@@ -1,7 +1,7 @@
 import { Task, Logger, FileSet } from "@worklift/core";
+import { Glob } from "bun";
 import { cp, mkdir, copyFile } from "fs/promises";
 import { basename, relative, join, dirname } from "path";
-import { glob } from "glob";
 
 /**
  * Configuration for CopyTask
@@ -95,10 +95,11 @@ export class CopyTask extends Task {
     await mkdir(this.toPath!, { recursive: true });
 
     // Get all files (expand globs)
-    const files = await glob(this.fromPath!, {
-      nodir: true,
-      absolute: true,
-    });
+    const files: string[] = [];
+    const globber = new Glob(this.fromPath!);
+    for await (const file of globber.scan({ onlyFiles: true, absolute: true })) {
+      files.push(file);
+    }
 
     // Copy each file to destination root
     for (const srcFile of files) {
@@ -120,11 +121,11 @@ export class CopyTask extends Task {
       ? this.fromPath!
       : `${this.fromPath}/**/*`;
 
-    const allFiles = await glob(globPattern, {
-      nodir: true,
-      absolute: true,
-      dot: true,
-    });
+    const allFiles: string[] = [];
+    const globber = new Glob(globPattern);
+    for await (const file of globber.scan({ onlyFiles: true, absolute: true, dot: true })) {
+      allFiles.push(file);
+    }
 
     // Determine the base directory for relative path calculation
     const baseDir = isGlobPattern
