@@ -4,41 +4,57 @@ import { writeFile, mkdir } from "fs/promises";
 import { dirname } from "path";
 
 /**
+ * Configuration for JarTask
+ */
+export interface JarTaskConfig {
+  /** Source directory containing compiled classes */
+  from: string;
+  /** Output JAR file path */
+  to: string;
+  /** Main class for executable JAR (optional) */
+  mainClass?: string;
+  /** Custom manifest file path (optional) */
+  manifest?: string;
+}
+
+/**
  * Task for creating JAR files
+ *
+ * @example
+ * ```typescript
+ * JarTask.of({
+ *   from: "build/classes",
+ *   to: "build/libs/app.jar",
+ *   mainClass: "com.example.Main",
+ * })
+ * ```
  */
 export class JarTask extends Task {
-  private baseDir?: string;
-  private jarFile?: string;
+  private baseDir: string;
+  private jarFile: string;
   private mainClassName?: string;
   private manifestFile?: string;
 
-  inputs?: string | string[];
-  outputs?: string | string[];
+  constructor(config: JarTaskConfig) {
+    super();
+    this.baseDir = config.from;
+    this.jarFile = config.to;
+    this.mainClassName = config.mainClass;
+    this.manifestFile = config.manifest;
 
-  static from(dir: string): JarTask {
-    const task = new JarTask();
-    task.baseDir = dir;
-    task.inputs = dir;
-    return task;
+    // Set inputs/outputs for incremental builds
+    this.inputs = this.baseDir;
+    this.outputs = this.jarFile;
   }
 
-  to(file: string): this {
-    this.jarFile = file;
-    this.outputs = file;
-    return this;
+  /**
+   * Create a new JarTask with the given configuration.
+   */
+  static of(config: JarTaskConfig): JarTask {
+    return new JarTask(config);
   }
 
-  mainClass(className: string): this {
-    this.mainClassName = className;
-    return this;
-  }
-
-  manifest(file: string): this {
-    this.manifestFile = file;
-    return this;
-  }
-
-  validate() {
+  override validate() {
     if (!this.baseDir) {
       throw new Error("JarTask: 'from' is required");
     }

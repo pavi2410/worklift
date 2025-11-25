@@ -17,10 +17,11 @@ describe("CopyTask rename", () => {
     writeFileSync("test-temp/lib/guava-20.0.jar", "guava content");
     writeFileSync("test-temp/lib/gson-2.8.5.jar", "gson content");
 
-    await CopyTask.from("test-temp/lib/*.jar")
-      .to("test-temp/build")
-      .rename(/^([-a-z0-9]*)-[\d.]*\.jar$/, "$1.jar")
-      .execute();
+    await CopyTask.of({
+      from: "test-temp/lib/*.jar",
+      to: "test-temp/build",
+      rename: { pattern: /^([-a-z0-9]*)-[\d.]*\.jar$/, replacement: "$1.jar" },
+    }).execute();
 
     expect(existsSync("test-temp/build/guava.jar")).toBe(true);
     expect(existsSync("test-temp/build/gson.jar")).toBe(true);
@@ -34,10 +35,11 @@ describe("CopyTask rename", () => {
     writeFileSync("test-temp/src/index.ts", "index content");
     writeFileSync("test-temp/src/utils.ts", "utils content");
 
-    await CopyTask.from("test-temp/src/*.ts")
-      .to("test-temp/build")
-      .rename(/\.ts$/, ".js")
-      .execute();
+    await CopyTask.of({
+      from: "test-temp/src/*.ts",
+      to: "test-temp/build",
+      rename: { pattern: /\.ts$/, replacement: ".js" },
+    }).execute();
 
     expect(existsSync("test-temp/build/index.js")).toBe(true);
     expect(existsSync("test-temp/build/utils.js")).toBe(true);
@@ -50,10 +52,11 @@ describe("CopyTask rename", () => {
     writeFileSync("test-temp/resources/database.template", "db config");
     writeFileSync("test-temp/resources/server.template", "server config");
 
-    await CopyTask.from("test-temp/resources/*.template")
-      .to("test-temp/config")
-      .rename(/^(.*)\.template$/, "config.$1.xml")
-      .execute();
+    await CopyTask.of({
+      from: "test-temp/resources/*.template",
+      to: "test-temp/config",
+      rename: { pattern: /^(.*)\.template$/, replacement: "config.$1.xml" },
+    }).execute();
 
     expect(existsSync("test-temp/config/config.database.xml")).toBe(true);
     expect(existsSync("test-temp/config/config.server.xml")).toBe(true);
@@ -65,10 +68,11 @@ describe("CopyTask rename", () => {
     writeFileSync("test-temp/src/file1.ts", "content1");
     writeFileSync("test-temp/src/subdir/file2.ts", "content2");
 
-    await CopyTask.from("test-temp/src/**/*.ts")
-      .to("test-temp/build")
-      .rename(/\.ts$/, ".js")
-      .execute();
+    await CopyTask.of({
+      from: "test-temp/src/**/*.ts",
+      to: "test-temp/build",
+      rename: { pattern: /\.ts$/, replacement: ".js" },
+    }).execute();
 
     expect(existsSync("test-temp/build/file1.js")).toBe(true);
     expect(existsSync("test-temp/build/subdir/file2.js")).toBe(true);
@@ -83,10 +87,11 @@ describe("CopyTask rename", () => {
     writeFileSync("test-temp/lib/readme.txt", "readme");
 
     // Use glob pattern directly in from() for simple cases
-    await CopyTask.from("test-temp/lib/*.jar")
-      .to("test-temp/build")
-      .rename(/^(.*)-[\d.]*\.jar$/, "$1.jar")
-      .execute();
+    await CopyTask.of({
+      from: "test-temp/lib/*.jar",
+      to: "test-temp/build",
+      rename: { pattern: /^(.*)-[\d.]*\.jar$/, replacement: "$1.jar" },
+    }).execute();
 
     expect(existsSync("test-temp/build/lib-a.jar")).toBe(true);
     expect(existsSync("test-temp/build/lib-b.jar")).toBe(true);
@@ -103,10 +108,11 @@ describe("CopyTask rename", () => {
       .include("**/*.ts")
       .exclude("**/test/**");
 
-    await CopyTask.files(fileSet)
-      .to("test-temp/build")
-      .rename(/\.ts$/, ".js")
-      .execute();
+    await CopyTask.of({
+      files: fileSet,
+      to: "test-temp/build",
+      rename: { pattern: /\.ts$/, replacement: ".js" },
+    }).execute();
 
     expect(existsSync("test-temp/build/app.js")).toBe(true);
     expect(existsSync("test-temp/build/test/app.test.js")).toBe(false);
@@ -117,10 +123,11 @@ describe("CopyTask rename", () => {
     writeFileSync("test-temp/lib/versioned-1.0.jar", "versioned");
     writeFileSync("test-temp/lib/noversion.jar", "noversion");
 
-    await CopyTask.from("test-temp/lib/*.jar")
-      .to("test-temp/build")
-      .rename(/^(.*)-[\d.]*\.jar$/, "$1.jar")
-      .execute();
+    await CopyTask.of({
+      from: "test-temp/lib/*.jar",
+      to: "test-temp/build",
+      rename: { pattern: /^(.*)-[\d.]*\.jar$/, replacement: "$1.jar" },
+    }).execute();
 
     expect(existsSync("test-temp/build/versioned.jar")).toBe(true);
     expect(existsSync("test-temp/build/noversion.jar")).toBe(true);
@@ -132,10 +139,11 @@ describe("CopyTask rename", () => {
     mkdirSync("test-temp/src", { recursive: true });
     writeFileSync("test-temp/src/component-v1-beta.tsx", "content");
 
-    await CopyTask.from("test-temp/src/*.tsx")
-      .to("test-temp/build")
-      .rename(/^(.*)-v(\d+)-(.*)\.tsx$/, "$1.$2.$3.js")
-      .execute();
+    await CopyTask.of({
+      from: "test-temp/src/*.tsx",
+      to: "test-temp/build",
+      rename: { pattern: /^(.*)-v(\d+)-(.*)\.tsx$/, replacement: "$1.$2.$3.js" },
+    }).execute();
 
     expect(existsSync("test-temp/build/component.1.beta.js")).toBe(true);
   });
@@ -146,10 +154,11 @@ describe("CopyTask rename", () => {
     writeFileSync("test-temp/src/components/Button.ts", "button");
     writeFileSync("test-temp/src/utils/helpers.ts", "helpers");
 
-    await CopyTask.from("test-temp/src/**/*.ts")
-      .to("test-temp/build")
-      .rename(/\.ts$/, ".js")
-      .execute();
+    await CopyTask.of({
+      from: "test-temp/src/**/*.ts",
+      to: "test-temp/build",
+      rename: { pattern: /\.ts$/, replacement: ".js" },
+    }).execute();
 
     expect(existsSync("test-temp/build/components/Button.js")).toBe(true);
     expect(existsSync("test-temp/build/utils/helpers.js")).toBe(true);
@@ -159,10 +168,11 @@ describe("CopyTask rename", () => {
     mkdirSync("test-temp/src", { recursive: true });
     writeFileSync("test-temp/src/file.backup.txt", "content");
 
-    await CopyTask.from("test-temp/src/*.txt")
-      .to("test-temp/build")
-      .rename(/\.backup/, "")
-      .execute();
+    await CopyTask.of({
+      from: "test-temp/src/*.txt",
+      to: "test-temp/build",
+      rename: { pattern: /\.backup/, replacement: "" },
+    }).execute();
 
     expect(existsSync("test-temp/build/file.txt")).toBe(true);
     expect(existsSync("test-temp/build/file.backup.txt")).toBe(false);

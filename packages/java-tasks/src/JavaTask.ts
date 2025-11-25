@@ -8,49 +8,66 @@ import { delimiter } from "path";
 type ClasspathElement = string | string[] | Artifact<string[]>;
 
 /**
+ * Configuration for JavaTask
+ */
+export interface JavaTaskConfig {
+  /** Main class to run (mutually exclusive with jar) */
+  mainClass?: string;
+  /** JAR file to run (mutually exclusive with mainClass) */
+  jar?: string;
+  /** Classpath entries (strings, arrays, or artifacts) */
+  classpath?: ClasspathElement[];
+  /** JVM arguments (e.g., "-Xmx512m") */
+  jvmArgs?: string[];
+  /** Program arguments */
+  args?: string[];
+}
+
+/**
  * Task for running Java applications
  *
  * Supports consuming classpath from artifacts produced by dependency resolution tasks.
+ *
+ * @example
+ * ```typescript
+ * JavaTask.of({
+ *   mainClass: "com.example.Main",
+ *   classpath: [deps, "build/classes"],
+ *   args: ["--verbose"],
+ * })
+ *
+ * JavaTask.of({
+ *   jar: "build/app.jar",
+ *   jvmArgs: ["-Xmx512m"],
+ * })
+ * ```
  */
 export class JavaTask extends Task {
-  private mainClass?: string;
+  private mainClassName?: string;
   private jarFile?: string;
-  private classpathElements: ClasspathElement[] = [];
-  private jvmArgs: string[] = [];
-  private programArgs: string[] = [];
+  private classpathElements: ClasspathElement[];
+  private jvmArgsList: string[];
+  private programArgs: string[];
 
-  inputs?: string | string[];
-  outputs?: string | string[];
+  constructor(config: JavaTaskConfig) {
+    super();
+    this.mainClassName = config.mainClass;
+    this.jarFile = config.jar;
+    this.classpathElements = config.classpath ?? [];
+    this.jvmArgsList = config.jvmArgs ?? [];
+    this.programArgs = config.args ?? [];
 
-  static mainClass(className: string): JavaTask {
-    const task = new JavaTask();
-    task.mainClass = className;
-    return task;
-  }
-
-  static jar(file: string): JavaTask {
-    const task = new JavaTask();
-    task.jarFile = file;
-    task.inputs = file;
-    return task;
+    // Set inputs for incremental builds
+    if (this.jarFile) {
+      this.inputs = this.jarFile;
+    }
   }
 
   /**
-   * Add classpath entries for running the Java application.
-   *
-   * Accepts a mix of:
-   * - Individual path strings
-   * - String arrays of paths
-   * - Artifacts containing path arrays (from dependency resolution)
-   *
-   * All elements are resolved and concatenated at execution time.
-   *
-   * @param elements - Classpath elements to add
-   * @returns This task for chaining
+   * Create a new JavaTask with the given configuration.
    */
-  classpath(...elements: ClasspathElement[]): this {
-    this.classpathElements.push(...elements);
-    return this;
+  static of(config: JavaTaskConfig): JavaTask {
+    return new JavaTask(config);
   }
 
   /**
@@ -73,18 +90,8 @@ export class JavaTask extends Task {
     return resolved;
   }
 
-  jvmArgs(args: string[]): this {
-    this.jvmArgs = args;
-    return this;
-  }
-
-  args(args: string[]): this {
-    this.programArgs = args;
-    return this;
-  }
-
-  validate() {
-    if (!this.mainClass && !this.jarFile) {
+  override validate() {
+    if (!this.mainClassName && !this.jarFile) {
       throw new Error("JavaTask: either 'mainClass' or 'jar' is required");
     }
   }
@@ -93,7 +100,7 @@ export class JavaTask extends Task {
     const args: string[] = [];
 
     // Add JVM args
-    args.push(...this.jvmArgs);
+    args.push(...this.jvmArgsList);
 
     // Add classpath or jar
     if (this.jarFile) {
@@ -104,7 +111,7 @@ export class JavaTask extends Task {
       if (classpath.length > 0) {
         args.push("-cp", classpath.join(delimiter));
       }
-      args.push(this.mainClass!);
+      args.push(this.mainClassName!);
     }
 
     // Add program args

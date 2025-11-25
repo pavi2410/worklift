@@ -17,9 +17,10 @@ describe("DeleteTask with patterns", () => {
     writeFileSync("test-temp/build/file.tmp", "content");
     writeFileSync("test-temp/build/sub/file.tmp", "content");
 
-    await DeleteTask.patterns("**/*.tmp")
-      .baseDir("test-temp/build")
-      .execute();
+    await DeleteTask.of({
+      patterns: ["**/*.tmp"],
+      baseDir: "test-temp/build",
+    }).execute();
 
     expect(existsSync("test-temp/build/file.txt")).toBe(true);
     expect(existsSync("test-temp/build/file.tmp")).toBe(false);
@@ -31,9 +32,10 @@ describe("DeleteTask with patterns", () => {
     writeFileSync("test-temp/build/file.bak", "content");
     writeFileSync("test-temp/build/file.txt", "content");
 
-    await DeleteTask.patterns("**/*.tmp", "**/*.bak")
-      .baseDir("test-temp/build")
-      .execute();
+    await DeleteTask.of({
+      patterns: ["**/*.tmp", "**/*.bak"],
+      baseDir: "test-temp/build",
+    }).execute();
 
     expect(existsSync("test-temp/build/file.txt")).toBe(true);
     expect(existsSync("test-temp/build/file.tmp")).toBe(false);
@@ -46,9 +48,10 @@ describe("DeleteTask with patterns", () => {
     writeFileSync("test-temp/build/file3.tmp", "content");
     writeFileSync("test-temp/build/sub/file4.txt", "content");
 
-    await DeleteTask.patterns("**/*.tmp")
-      .baseDir("test-temp/build")
-      .execute();
+    await DeleteTask.of({
+      patterns: ["**/*.tmp"],
+      baseDir: "test-temp/build",
+    }).execute();
 
     expect(existsSync("test-temp/build/file1.txt")).toBe(true);
     expect(existsSync("test-temp/build/file2.js")).toBe(true);
@@ -62,9 +65,10 @@ describe("DeleteTask with patterns", () => {
     writeFileSync("test-temp/build/sub/file.log", "content");
     writeFileSync("test-temp/build/sub/nested/file.log", "content");
 
-    await DeleteTask.patterns("**/*.log")
-      .baseDir("test-temp/build")
-      .execute();
+    await DeleteTask.of({
+      patterns: ["**/*.log"],
+      baseDir: "test-temp/build",
+    }).execute();
 
     expect(existsSync("test-temp/build/file.log")).toBe(false);
     expect(existsSync("test-temp/build/sub/file.log")).toBe(false);
@@ -76,7 +80,7 @@ describe("DeleteTask with patterns", () => {
     writeFileSync("test-temp/target/file.tmp", "content");
     writeFileSync("test-temp/target/file.txt", "content");
 
-    await DeleteTask.patterns("test-temp/target/**/*.tmp").execute();
+    await DeleteTask.of({ patterns: ["test-temp/target/**/*.tmp"] }).execute();
 
     expect(existsSync("test-temp/target/file.txt")).toBe(true);
     expect(existsSync("test-temp/target/file.tmp")).toBe(false);
@@ -87,10 +91,11 @@ describe("DeleteTask with patterns", () => {
     mkdirSync("test-temp/build/prod-dir", { recursive: true });
     writeFileSync("test-temp/build/test-dir/file.txt", "content");
 
-    await DeleteTask.patterns("**/test-*")
-      .baseDir("test-temp/build")
-      .includeDirs(true)
-      .execute();
+    await DeleteTask.of({
+      patterns: ["**/test-*"],
+      baseDir: "test-temp/build",
+      includeDirs: true,
+    }).execute();
 
     expect(existsSync("test-temp/build/test-dir")).toBe(false);
     expect(existsSync("test-temp/build/prod-dir")).toBe(true);
@@ -100,10 +105,11 @@ describe("DeleteTask with patterns", () => {
     mkdirSync("test-temp/build/test-dir", { recursive: true });
     writeFileSync("test-temp/build/file.tmp", "content");
 
-    await DeleteTask.patterns("**/*.tmp")
-      .baseDir("test-temp/build")
-      .includeDirs(false)
-      .execute();
+    await DeleteTask.of({
+      patterns: ["**/*.tmp"],
+      baseDir: "test-temp/build",
+      includeDirs: false,
+    }).execute();
 
     expect(existsSync("test-temp/build/file.tmp")).toBe(false);
     expect(existsSync("test-temp/build/test-dir")).toBe(true);
@@ -131,10 +137,9 @@ describe("DeleteTask with paths (backward compatibility)", () => {
     writeFileSync("test-temp/build/file1.txt", "content");
     writeFileSync("test-temp/build/file2.txt", "content");
 
-    await DeleteTask.paths(
-      "test-temp/build/file1.txt",
-      "test-temp/build/file2.txt"
-    ).execute();
+    await DeleteTask.of({
+      paths: ["test-temp/build/file1.txt", "test-temp/build/file2.txt"],
+    }).execute();
 
     expect(existsSync("test-temp/build/file1.txt")).toBe(false);
     expect(existsSync("test-temp/build/file2.txt")).toBe(false);
@@ -144,15 +149,16 @@ describe("DeleteTask with paths (backward compatibility)", () => {
     mkdirSync("test-temp/build/subdir", { recursive: true });
     writeFileSync("test-temp/build/subdir/file.txt", "content");
 
-    await DeleteTask.paths("test-temp/build/subdir")
-      .recursive(true)
-      .execute();
+    await DeleteTask.of({
+      paths: ["test-temp/build/subdir"],
+      recursive: true,
+    }).execute();
 
     expect(existsSync("test-temp/build/subdir")).toBe(false);
   });
 
   test("handles non-existent paths gracefully (force: true)", async () => {
-    await DeleteTask.paths("test-temp/build/non-existent.txt").execute();
+    await DeleteTask.of({ paths: ["test-temp/build/non-existent.txt"] }).execute();
 
     // Should not throw an error due to force: true
     expect(true).toBe(true);
@@ -173,11 +179,10 @@ describe("DeleteTask mixed usage", () => {
     writeFileSync("test-temp/build/file.tmp", "content");
     writeFileSync("test-temp/build/file.bak", "content");
 
-    const task = DeleteTask.patterns("**/*.tmp")
-      .baseDir("test-temp/build")
-      .execute();
-
-    await task;
+    await DeleteTask.of({
+      patterns: ["**/*.tmp"],
+      baseDir: "test-temp/build",
+    }).execute();
 
     expect(existsSync("test-temp/build/file.tmp")).toBe(false);
     expect(existsSync("test-temp/build/file.bak")).toBe(true);

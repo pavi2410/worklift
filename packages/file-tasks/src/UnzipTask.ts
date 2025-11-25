@@ -2,35 +2,45 @@ import { Task } from "@worklift/core";
 import { spawn } from "child_process";
 
 /**
- * Task for extracting ZIP archives
+ * Configuration for UnzipTask
+ */
+export interface UnzipTaskConfig {
+  /** ZIP file to extract */
+  file: string;
+  /** Destination directory */
+  to: string;
+  /** Overwrite existing files (default: true) */
+  overwrite?: boolean;
+}
+
+/**
+ * Task for extracting ZIP archives.
+ *
+ * @example
+ * ```typescript
+ * UnzipTask.of({ file: "archive.zip", to: "extracted" })
+ * ```
  */
 export class UnzipTask extends Task {
-  private zipFile?: string;
-  private destDir?: string;
-  private overwriteFlag = true;
+  private zipFile: string;
+  private destDir: string;
+  private overwriteFlag: boolean;
 
-  inputs?: string | string[];
-  outputs?: string | string[];
+  constructor(config: UnzipTaskConfig) {
+    super();
+    this.zipFile = config.file;
+    this.destDir = config.to;
+    this.overwriteFlag = config.overwrite ?? true;
 
-  static file(path: string): UnzipTask {
-    const task = new UnzipTask();
-    task.zipFile = path;
-    task.inputs = path;
-    return task;
+    this.inputs = this.zipFile;
+    this.outputs = this.destDir;
   }
 
-  to(dir: string): this {
-    this.destDir = dir;
-    this.outputs = dir;
-    return this;
+  static of(config: UnzipTaskConfig): UnzipTask {
+    return new UnzipTask(config);
   }
 
-  overwrite(value: boolean): this {
-    this.overwriteFlag = value;
-    return this;
-  }
-
-  validate() {
+  override validate() {
     if (!this.zipFile) {
       throw new Error("UnzipTask: 'file' is required");
     }

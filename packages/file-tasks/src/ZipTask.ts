@@ -4,43 +4,50 @@ import { relative, isAbsolute, resolve as resolvePath } from "path";
 import { FileSet } from "./FileSet.ts";
 
 /**
+ * Configuration for ZipTask
+ */
+export interface ZipTaskConfig {
+  /** Source path or directory */
+  from?: string;
+  /** FileSet for zipping specific files */
+  files?: FileSet;
+  /** Output ZIP file path */
+  to: string;
+  /** Include subdirectories (default: true) */
+  recursive?: boolean;
+}
+
+/**
  * Task for creating ZIP archives.
- * Use FileSet for zipping specific file collections.
+ *
+ * @example
+ * ```typescript
+ * ZipTask.of({ from: "dist", to: "release.zip" })
+ * ZipTask.of({ files: FileSet.from("src").include("**\/*.ts"), to: "source.zip" })
+ * ```
  */
 export class ZipTask extends Task {
   private sourcePath?: string;
   private fileSet?: FileSet;
-  private zipFile?: string;
-  private recursiveFlag = true;
+  private zipFile: string;
+  private recursiveFlag: boolean;
 
-  inputs?: string | string[];
-  outputs?: string | string[];
+  constructor(config: ZipTaskConfig) {
+    super();
+    this.sourcePath = config.from;
+    this.fileSet = config.files;
+    this.zipFile = config.to;
+    this.recursiveFlag = config.recursive ?? true;
 
-  static from(path: string): ZipTask {
-    const task = new ZipTask();
-    task.sourcePath = path;
-    task.inputs = path;
-    return task;
+    if (this.sourcePath) this.inputs = this.sourcePath;
+    this.outputs = this.zipFile;
   }
 
-  static files(fileSet: FileSet): ZipTask {
-    const task = new ZipTask();
-    task.fileSet = fileSet;
-    return task;
+  static of(config: ZipTaskConfig): ZipTask {
+    return new ZipTask(config);
   }
 
-  to(file: string): this {
-    this.zipFile = file;
-    this.outputs = file;
-    return this;
-  }
-
-  recursive(value: boolean): this {
-    this.recursiveFlag = value;
-    return this;
-  }
-
-  validate() {
+  override validate() {
     if (!this.sourcePath && !this.fileSet) {
       throw new Error("ZipTask: 'from' or 'files' is required");
     }

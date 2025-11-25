@@ -20,23 +20,27 @@ const lib = project("lib");
 
 // Clean target - removes all build artifacts
 export const libClean = lib.target("clean").tasks([
-  DeleteTask.paths("lib/build").recursive(true),
+  DeleteTask.of({ paths: ["lib/build"], recursive: true }),
 ]);
 
 // Compile target - compiles Java sources to class files
 export const libCompile = lib.target("compile")
   .dependsOn(libClean)
   .tasks([
-    JavacTask.sources("lib/src/com/example/lib/StringUtils.java")
-      .destination("lib/build/classes"),
+    JavacTask.of({
+      sources: "lib/src/com/example/lib/StringUtils.java",
+      destination: "lib/build/classes",
+    }),
   ]);
 
 // JAR target - packages compiled classes into a JAR file
 export const libJar = lib.target("jar")
   .dependsOn(libCompile)
   .tasks([
-    JarTask.from("lib/build/classes")
-      .to("lib/build/string-utils.jar"),
+    JarTask.of({
+      from: "lib/build/classes",
+      to: "lib/build/string-utils.jar",
+    }),
   ]);
 
 // =============================================================================
@@ -47,36 +51,42 @@ const app = project("app").dependsOn(lib);
 
 // Clean target - removes all build artifacts
 export const appClean = app.target("clean").tasks([
-  DeleteTask.paths("app/build").recursive(true),
+  DeleteTask.of({ paths: ["app/build"], recursive: true }),
 ]);
 
 // Compile target - compiles Java sources with library on classpath
 export const appCompile = app.target("compile")
   .dependsOn(appClean, libJar)  // Depends on lib being packaged
   .tasks([
-    JavacTask.sources("app/src/com/example/app/Main.java")
-      .destination("app/build/classes")
-      .classpath(["lib/build/string-utils.jar"]),  // Use the library JAR
+    JavacTask.of({
+      sources: "app/src/com/example/app/Main.java",
+      destination: "app/build/classes",
+      classpath: ["lib/build/string-utils.jar"],  // Use the library JAR
+    }),
   ]);
 
 // JAR target - packages application into executable JAR
 export const appJar = app.target("jar")
   .dependsOn(appCompile)
   .tasks([
-    JarTask.from("app/build/classes")
-      .to("app/build/demo-app.jar")
-      .mainClass("com.example.app.Main"),
+    JarTask.of({
+      from: "app/build/classes",
+      to: "app/build/demo-app.jar",
+      mainClass: "com.example.app.Main",
+    }),
   ]);
 
 // Run target - runs the application with library on classpath
 export const appRun = app.target("run")
   .dependsOn(appCompile)
   .tasks([
-    JavaTask.mainClass("com.example.app.Main")
-      .classpath([
+    JavaTask.of({
+      mainClass: "com.example.app.Main",
+      classpath: [
         "app/build/classes",
         "lib/build/string-utils.jar",  // Library must be on classpath
-      ]),
+      ],
+    }),
   ]);
 
 // =============================================================================

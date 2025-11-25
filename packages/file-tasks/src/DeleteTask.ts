@@ -4,57 +4,72 @@ import { glob } from "glob";
 import { FileSet } from "./FileSet.ts";
 
 /**
+ * Configuration for DeleteTask
+ */
+export interface DeleteTaskConfig {
+  /** Explicit paths to delete */
+  paths?: string[];
+  /** Glob patterns to match files for deletion */
+  patterns?: string[];
+  /** FileSet for complex file selection */
+  files?: FileSet;
+  /** Base directory for pattern matching */
+  baseDir?: string;
+  /** Delete directories recursively (default: true) */
+  recursive?: boolean;
+  /** Include directories when matching patterns (default: false) */
+  includeDirs?: boolean;
+}
+
+/**
  * Task for deleting files or directories.
- * Use FileSet for complex file selection with include/exclude patterns.
+ *
+ * @example
+ * ```typescript
+ * // Delete specific paths
+ * DeleteTask.of({ paths: ["build", "dist"] })
+ *
+ * // Delete files matching patterns
+ * DeleteTask.of({
+ *   patterns: ["**\/*.tmp", "**\/*.bak"],
+ *   baseDir: "build",
+ * })
+ *
+ * // Delete with FileSet
+ * DeleteTask.of({
+ *   files: FileSet.from("build").include("**\/*.class"),
+ * })
+ * ```
  */
 export class DeleteTask extends Task {
-  private pathList?: string[];
-  private patternList?: string[];
+  private pathList: string[];
+  private patternList: string[];
   private fileSet?: FileSet;
   private baseDirPath?: string;
-  private recursiveFlag = true;
-  private includeDirsFlag = false;
+  private recursiveFlag: boolean;
+  private includeDirsFlag: boolean;
 
-  inputs?: string | string[];
-  outputs?: string | string[];
-
-  static paths(...paths: string[]): DeleteTask {
-    const task = new DeleteTask();
-    task.pathList = paths;
-    return task;
+  constructor(config: DeleteTaskConfig = {}) {
+    super();
+    this.pathList = config.paths ?? [];
+    this.patternList = config.patterns ?? [];
+    this.fileSet = config.files;
+    this.baseDirPath = config.baseDir;
+    this.recursiveFlag = config.recursive ?? true;
+    this.includeDirsFlag = config.includeDirs ?? false;
   }
 
-  static patterns(...patterns: string[]): DeleteTask {
-    const task = new DeleteTask();
-    task.patternList = patterns;
-    return task;
+  /**
+   * Create a new DeleteTask with the given configuration.
+   */
+  static of(config: DeleteTaskConfig): DeleteTask {
+    return new DeleteTask(config);
   }
 
-  static files(fileSet: FileSet): DeleteTask {
-    const task = new DeleteTask();
-    task.fileSet = fileSet;
-    return task;
-  }
-
-  baseDir(dir: string): this {
-    this.baseDirPath = dir;
-    return this;
-  }
-
-  recursive(value: boolean): this {
-    this.recursiveFlag = value;
-    return this;
-  }
-
-  includeDirs(value: boolean): this {
-    this.includeDirsFlag = value;
-    return this;
-  }
-
-  validate() {
+  override validate() {
     if (
-      (!this.pathList || this.pathList.length === 0) &&
-      (!this.patternList || this.patternList.length === 0) &&
+      this.pathList.length === 0 &&
+      this.patternList.length === 0 &&
       !this.fileSet
     ) {
       throw new Error("DeleteTask: 'paths', 'patterns', or 'files' is required");

@@ -22,7 +22,7 @@ describe("CopyTask with FileSet excludes", () => {
 
   test("excludes single file", async () => {
     const fileSet = FileSet.dir("test-temp/src").exclude("file2.tmp");
-    await CopyTask.files(fileSet).to("test-temp/dest").execute();
+    await CopyTask.of({ files: fileSet, to: "test-temp/dest" }).execute();
 
     expect(existsSync("test-temp/dest/file1.txt")).toBe(true);
     expect(existsSync("test-temp/dest/file2.tmp")).toBe(false);
@@ -31,7 +31,7 @@ describe("CopyTask with FileSet excludes", () => {
 
   test("excludes with glob pattern", async () => {
     const fileSet = FileSet.dir("test-temp/src").exclude("**/*.tmp");
-    await CopyTask.files(fileSet).to("test-temp/dest").execute();
+    await CopyTask.of({ files: fileSet, to: "test-temp/dest" }).execute();
 
     expect(existsSync("test-temp/dest/file1.txt")).toBe(true);
     expect(existsSync("test-temp/dest/file2.tmp")).toBe(false);
@@ -41,7 +41,7 @@ describe("CopyTask with FileSet excludes", () => {
 
   test("excludes multiple patterns", async () => {
     const fileSet = FileSet.dir("test-temp/src").exclude("**/*.tmp", "**/subdir/**");
-    await CopyTask.files(fileSet).to("test-temp/dest").execute();
+    await CopyTask.of({ files: fileSet, to: "test-temp/dest" }).execute();
 
     expect(existsSync("test-temp/dest/file1.txt")).toBe(true);
     expect(existsSync("test-temp/dest/file2.tmp")).toBe(false);
@@ -52,7 +52,7 @@ describe("CopyTask with FileSet excludes", () => {
     const fileSet = FileSet.dir("test-temp/src")
       .exclude("**/*.tmp")
       .exclude("**/*.bak");
-    await CopyTask.files(fileSet).to("test-temp/dest").execute();
+    await CopyTask.of({ files: fileSet, to: "test-temp/dest" }).execute();
 
     expect(existsSync("test-temp/dest/file1.txt")).toBe(true);
     expect(existsSync("test-temp/dest/file2.tmp")).toBe(false);
@@ -62,14 +62,14 @@ describe("CopyTask with FileSet excludes", () => {
 
   test("excludes directory with wildcard", async () => {
     const fileSet = FileSet.dir("test-temp/src").exclude("**/test/**");
-    await CopyTask.files(fileSet).to("test-temp/dest").execute();
+    await CopyTask.of({ files: fileSet, to: "test-temp/dest" }).execute();
 
     expect(existsSync("test-temp/dest/file1.txt")).toBe(true);
     expect(existsSync("test-temp/dest/test/test.txt")).toBe(false);
   });
 
   test("works without excludes (backward compatibility)", async () => {
-    await CopyTask.from("test-temp/src").to("test-temp/dest").execute();
+    await CopyTask.of({ from: "test-temp/src", to: "test-temp/dest" }).execute();
 
     expect(existsSync("test-temp/dest/file1.txt")).toBe(true);
     expect(existsSync("test-temp/dest/file2.tmp")).toBe(true);
@@ -79,7 +79,7 @@ describe("CopyTask with FileSet excludes", () => {
 
   test("excludes specific file in subdirectory", async () => {
     const fileSet = FileSet.dir("test-temp/src").exclude("subdir/file3.txt");
-    await CopyTask.files(fileSet).to("test-temp/dest").execute();
+    await CopyTask.of({ files: fileSet, to: "test-temp/dest" }).execute();
 
     expect(existsSync("test-temp/dest/file1.txt")).toBe(true);
     expect(existsSync("test-temp/dest/subdir/file3.txt")).toBe(false);
@@ -89,7 +89,7 @@ describe("CopyTask with FileSet excludes", () => {
   test("excludes with multiple wildcards", async () => {
     const fileSet = FileSet.dir("test-temp/src")
       .exclude("**/*.tmp", "**/*.bak", "**/test/**");
-    await CopyTask.files(fileSet).to("test-temp/dest").execute();
+    await CopyTask.of({ files: fileSet, to: "test-temp/dest" }).execute();
 
     expect(existsSync("test-temp/dest/file1.txt")).toBe(true);
     expect(existsSync("test-temp/dest/file2.tmp")).toBe(false);

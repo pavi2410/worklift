@@ -185,7 +185,7 @@ describe("FileSet", () => {
 
       const fileSet = FileSet.dir(srcDir).include("**/*.txt");
 
-      await CopyTask.files(fileSet).to(destDir).execute();
+      await CopyTask.of({ files: fileSet, to: destDir }).execute();
 
       expect(existsSync(join(destDir, "file.txt"))).toBe(true);
     });
@@ -199,7 +199,7 @@ describe("FileSet", () => {
 
       const fileSet = FileSet.dir(srcDir).include("**/*.txt");
 
-      await CopyTask.files(fileSet).to(destDir).execute();
+      await CopyTask.of({ files: fileSet, to: destDir }).execute();
 
       expect(existsSync(join(destDir, "file1.txt"))).toBe(true);
       expect(existsSync(join(destDir, "subdir", "file2.txt"))).toBe(true);
@@ -214,7 +214,7 @@ describe("FileSet", () => {
 
       const fileSet = FileSet.dir(srcDir).include("**/*.txt");
 
-      await CopyTask.files(fileSet).to(destDir).execute();
+      await CopyTask.of({ files: fileSet, to: destDir }).execute();
 
       expect(existsSync(join(destDir, "include.txt"))).toBe(true);
       expect(existsSync(join(destDir, "exclude.log"))).toBe(false);
@@ -231,7 +231,7 @@ describe("FileSet", () => {
         .include("**/*.txt")
         .exclude("**/test/**");
 
-      await CopyTask.files(fileSet).to(destDir).execute();
+      await CopyTask.of({ files: fileSet, to: destDir }).execute();
 
       expect(existsSync(join(destDir, "prod.txt"))).toBe(true);
       expect(existsSync(join(destDir, "test", "test.txt"))).toBe(false);
@@ -246,8 +246,8 @@ describe("FileSet", () => {
 
       const fileSet = FileSet.dir(srcDir).include("**/*.txt");
 
-      await CopyTask.files(fileSet).to(dest1).execute();
-      await CopyTask.files(fileSet).to(dest2).execute();
+      await CopyTask.of({ files: fileSet, to: dest1 }).execute();
+      await CopyTask.of({ files: fileSet, to: dest2 }).execute();
 
       expect(existsSync(join(dest1, "file.txt"))).toBe(true);
       expect(existsSync(join(dest2, "file.txt"))).toBe(true);

@@ -23,7 +23,7 @@ describe("CopyTask with FileSet includes", () => {
 
   test("includes only matching files", async () => {
     const fileSet = FileSet.dir("test-temp/src").include("**/*.ts");
-    await CopyTask.files(fileSet).to("test-temp/dest").execute();
+    await CopyTask.of({ files: fileSet, to: "test-temp/dest" }).execute();
 
     expect(existsSync("test-temp/dest/file1.txt")).toBe(false);
     expect(existsSync("test-temp/dest/file2.ts")).toBe(true);
@@ -33,7 +33,7 @@ describe("CopyTask with FileSet includes", () => {
 
   test("includes multiple patterns", async () => {
     const fileSet = FileSet.dir("test-temp/src").include("**/*.ts", "**/*.js");
-    await CopyTask.files(fileSet).to("test-temp/dest").execute();
+    await CopyTask.of({ files: fileSet, to: "test-temp/dest" }).execute();
 
     expect(existsSync("test-temp/dest/file1.txt")).toBe(false);
     expect(existsSync("test-temp/dest/file2.ts")).toBe(true);
@@ -46,7 +46,7 @@ describe("CopyTask with FileSet includes", () => {
     const fileSet = FileSet.dir("test-temp/src")
       .include("**/*.ts")
       .include("**/*.js");
-    await CopyTask.files(fileSet).to("test-temp/dest").execute();
+    await CopyTask.of({ files: fileSet, to: "test-temp/dest" }).execute();
 
     expect(existsSync("test-temp/dest/file1.txt")).toBe(false);
     expect(existsSync("test-temp/dest/file2.ts")).toBe(true);
@@ -56,7 +56,7 @@ describe("CopyTask with FileSet includes", () => {
 
   test("includes specific files", async () => {
     const fileSet = FileSet.dir("test-temp/src").include("file2.ts", "subdir/file5.txt");
-    await CopyTask.files(fileSet).to("test-temp/dest").execute();
+    await CopyTask.of({ files: fileSet, to: "test-temp/dest" }).execute();
 
     expect(existsSync("test-temp/dest/file1.txt")).toBe(false);
     expect(existsSync("test-temp/dest/file2.ts")).toBe(true);
@@ -67,7 +67,7 @@ describe("CopyTask with FileSet includes", () => {
 
   test("includes from specific directory", async () => {
     const fileSet = FileSet.dir("test-temp/src").include("subdir/**");
-    await CopyTask.files(fileSet).to("test-temp/dest").execute();
+    await CopyTask.of({ files: fileSet, to: "test-temp/dest" }).execute();
 
     expect(existsSync("test-temp/dest/file1.txt")).toBe(false);
     expect(existsSync("test-temp/dest/file2.ts")).toBe(false);
@@ -79,7 +79,7 @@ describe("CopyTask with FileSet includes", () => {
     const fileSet = FileSet.dir("test-temp/src")
       .include("**/*.txt")
       .exclude("**/test/**");
-    await CopyTask.files(fileSet).to("test-temp/dest").execute();
+    await CopyTask.of({ files: fileSet, to: "test-temp/dest" }).execute();
 
     expect(existsSync("test-temp/dest/file1.txt")).toBe(true);
     expect(existsSync("test-temp/dest/file2.ts")).toBe(false);
@@ -91,7 +91,7 @@ describe("CopyTask with FileSet includes", () => {
     const fileSet = FileSet.dir("test-temp/src")
       .include("**/*.ts", "**/*.js")
       .exclude("**/subdir/**");
-    await CopyTask.files(fileSet).to("test-temp/dest").execute();
+    await CopyTask.of({ files: fileSet, to: "test-temp/dest" }).execute();
 
     expect(existsSync("test-temp/dest/file1.txt")).toBe(false);
     expect(existsSync("test-temp/dest/file2.ts")).toBe(true);
@@ -103,7 +103,7 @@ describe("CopyTask with FileSet includes", () => {
     const fileSet = FileSet.dir("test-temp/src")
       .include("**/*.ts")
       .exclude("**/*.ts");
-    await CopyTask.files(fileSet).to("test-temp/dest").execute();
+    await CopyTask.of({ files: fileSet, to: "test-temp/dest" }).execute();
 
     expect(existsSync("test-temp/dest/file2.ts")).toBe(false);
     expect(existsSync("test-temp/dest/subdir/file6.ts")).toBe(false);
@@ -113,7 +113,7 @@ describe("CopyTask with FileSet includes", () => {
     const fileSet = FileSet.dir("test-temp/src")
       .include("**/*.txt", "**/*.ts", "**/*.js")
       .exclude("**/*.bak");
-    await CopyTask.files(fileSet).to("test-temp/dest").execute();
+    await CopyTask.of({ files: fileSet, to: "test-temp/dest" }).execute();
 
     expect(existsSync("test-temp/dest/file1.txt")).toBe(true);
     expect(existsSync("test-temp/dest/file2.ts")).toBe(true);

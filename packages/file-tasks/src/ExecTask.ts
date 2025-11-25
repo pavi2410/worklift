@@ -2,39 +2,47 @@ import { Task } from "@worklift/core";
 import { spawn } from "child_process";
 
 /**
- * Task for executing shell commands
+ * Configuration for ExecTask
+ */
+export interface ExecTaskConfig {
+  /** Command to execute */
+  command: string;
+  /** Command arguments */
+  args?: string[];
+  /** Working directory */
+  cwd?: string;
+  /** Environment variables */
+  env?: Record<string, string>;
+}
+
+/**
+ * Task for executing shell commands.
+ *
+ * @example
+ * ```typescript
+ * ExecTask.of({ command: "npm", args: ["install"] })
+ * ExecTask.of({ command: "./build.sh", cwd: "scripts" })
+ * ```
  */
 export class ExecTask extends Task {
-  private cmd?: string;
-  private argList: string[] = [];
+  private cmd: string;
+  private argList: string[];
   private workingDir?: string;
   private environment?: Record<string, string>;
 
-  inputs?: string | string[];
-  outputs?: string | string[];
-
-  static command(cmd: string): ExecTask {
-    const task = new ExecTask();
-    task.cmd = cmd;
-    return task;
+  constructor(config: ExecTaskConfig) {
+    super();
+    this.cmd = config.command;
+    this.argList = config.args ?? [];
+    this.workingDir = config.cwd;
+    this.environment = config.env;
   }
 
-  args(args: string[]): this {
-    this.argList = args;
-    return this;
+  static of(config: ExecTaskConfig): ExecTask {
+    return new ExecTask(config);
   }
 
-  cwd(dir: string): this {
-    this.workingDir = dir;
-    return this;
-  }
-
-  env(vars: Record<string, string>): this {
-    this.environment = vars;
-    return this;
-  }
-
-  validate() {
+  override validate() {
     if (!this.cmd) {
       throw new Error("ExecTask: 'command' is required");
     }

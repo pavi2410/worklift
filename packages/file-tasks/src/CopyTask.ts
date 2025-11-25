@@ -5,63 +5,66 @@ import { glob } from "glob";
 import { FileSet } from "./FileSet.ts";
 
 /**
+ * Configuration for CopyTask
+ */
+export interface CopyTaskConfig {
+  /** Source path or glob pattern */
+  from?: string;
+  /** FileSet for advanced file selection */
+  files?: FileSet;
+  /** Destination path */
+  to: string;
+  /** Copy directories recursively (default: true) */
+  recursive?: boolean;
+  /** Overwrite existing files (default: true) */
+  force?: boolean;
+  /** Flatten directory structure (default: false) */
+  flatten?: boolean;
+  /** Rename pattern and replacement */
+  rename?: { pattern: RegExp; replacement: string };
+}
+
+/**
  * Task for copying files or directories.
- * Use FileSet for advanced file selection with include/exclude patterns.
+ *
+ * @example
+ * ```typescript
+ * CopyTask.of({ from: "src", to: "dist" })
+ * CopyTask.of({ files: FileSet.from("src").include("**\/*.ts"), to: "dist" })
+ * ```
  */
 export class CopyTask extends Task {
   private fromPath?: string;
   private fileSet?: FileSet;
-  private toPath?: string;
-  private recursiveFlag = true;
-  private forceFlag = true;
-  private flattenFlag = false;
+  private toPath: string;
+  private recursiveFlag: boolean;
+  private forceFlag: boolean;
+  private flattenFlag: boolean;
   private renamePattern?: RegExp;
   private renameReplacement?: string;
 
-  inputs?: string | string[];
-  outputs?: string | string[];
+  constructor(config: CopyTaskConfig) {
+    super();
+    this.fromPath = config.from;
+    this.fileSet = config.files;
+    this.toPath = config.to;
+    this.recursiveFlag = config.recursive ?? true;
+    this.forceFlag = config.force ?? true;
+    this.flattenFlag = config.flatten ?? false;
+    if (config.rename) {
+      this.renamePattern = config.rename.pattern;
+      this.renameReplacement = config.rename.replacement;
+    }
 
-  static from(path: string): CopyTask {
-    const task = new CopyTask();
-    task.fromPath = path;
-    task.inputs = path;
-    return task;
+    if (this.fromPath) this.inputs = this.fromPath;
+    this.outputs = this.toPath;
   }
 
-  static files(fileSet: FileSet): CopyTask {
-    const task = new CopyTask();
-    task.fileSet = fileSet;
-    return task;
+  static of(config: CopyTaskConfig): CopyTask {
+    return new CopyTask(config);
   }
 
-  to(path: string): this {
-    this.toPath = path;
-    this.outputs = path;
-    return this;
-  }
-
-  recursive(value: boolean): this {
-    this.recursiveFlag = value;
-    return this;
-  }
-
-  force(value: boolean): this {
-    this.forceFlag = value;
-    return this;
-  }
-
-  flatten(value: boolean): this {
-    this.flattenFlag = value;
-    return this;
-  }
-
-  rename(pattern: RegExp, replacement: string): this {
-    this.renamePattern = pattern;
-    this.renameReplacement = replacement;
-    return this;
-  }
-
-  validate() {
+  override validate() {
     if (!this.fromPath && !this.fileSet) {
       throw new Error("CopyTask: 'from' or 'files' is required");
     }

@@ -26,23 +26,13 @@ describe("File Tasks", () => {
   });
 
   describe("CopyTask", () => {
-    test("creates task with fluent API", () => {
-      const task = CopyTask.from("src").to("dist");
+    test("creates task with object config", () => {
+      const task = CopyTask.of({ from: "src", to: "dist" });
       expect(task).toBeInstanceOf(CopyTask);
     });
 
-    test("validates from parameter is required", () => {
-      const task = new CopyTask();
-      expect(() => task.validate()).toThrow("CopyTask: 'from' or 'files' is required");
-    });
-
-    test("validates to parameter is required", () => {
-      const task = CopyTask.from("src");
-      expect(() => task.validate()).toThrow("CopyTask: 'to' is required");
-    });
-
     test("sets inputs and outputs correctly", () => {
-      const task = CopyTask.from("src").to("dist");
+      const task = CopyTask.of({ from: "src", to: "dist" });
       expect(task.inputs).toBe("src");
       expect(task.outputs).toBe("dist");
     });
@@ -53,7 +43,7 @@ describe("File Tasks", () => {
 
       await writeFile(srcFile, "test content");
 
-      const task = CopyTask.from(srcFile).to(destFile);
+      const task = CopyTask.of({ from: srcFile, to: destFile });
       await task.execute();
 
       const content = await readFile(destFile, "utf-8");
@@ -68,18 +58,20 @@ describe("File Tasks", () => {
       await writeFile(join(srcDir, "file1.txt"), "content1");
       await writeFile(join(srcDir, "subdir", "file2.txt"), "content2");
 
-      const task = CopyTask.from(srcDir).to(destDir).recursive(true);
+      const task = CopyTask.of({ from: srcDir, to: destDir, recursive: true });
       await task.execute();
 
       expect(existsSync(join(destDir, "file1.txt"))).toBe(true);
       expect(existsSync(join(destDir, "subdir", "file2.txt"))).toBe(true);
     });
 
-    test("supports method chaining", () => {
-      const task = CopyTask.from("src")
-        .to("dist")
-        .recursive(false)
-        .force(false);
+    test("supports full configuration", () => {
+      const task = CopyTask.of({
+        from: "src",
+        to: "dist",
+        recursive: false,
+        force: false,
+      });
       expect(task).toBeInstanceOf(CopyTask);
     });
 
@@ -92,9 +84,11 @@ describe("File Tasks", () => {
       await writeFile(join(srcDir, "a", "b", "file2.txt"), "2");
       await writeFile(join(srcDir, "a", "b", "c", "file3.txt"), "3");
 
-      const task = CopyTask.from(join(srcDir, "**/*.txt"))
-        .to(destDir)
-        .flatten(true);
+      const task = CopyTask.of({
+        from: join(srcDir, "**/*.txt"),
+        to: destDir,
+        flatten: true,
+      });
       await task.execute();
 
       expect(existsSync(join(destDir, "file1.txt"))).toBe(true);
@@ -119,9 +113,11 @@ describe("File Tasks", () => {
       await writeFile(join(srcDir, "icons", "play.png"), "play icon");
       await writeFile(join(srcDir, "sounds", "beep.mp3"), "beep sound");
 
-      const task = CopyTask.from(join(srcDir, "**/*"))
-        .to(destDir)
-        .flatten(true);
+      const task = CopyTask.of({
+        from: join(srcDir, "**/*"),
+        to: destDir,
+        flatten: true,
+      });
       await task.execute();
 
       expect(existsSync(join(destDir, "play.png"))).toBe(true);
@@ -147,9 +143,11 @@ describe("File Tasks", () => {
         "content3"
       );
 
-      const task = CopyTask.from(join(srcDir, "**/*.txt"))
-        .to(destDir)
-        .flatten(true);
+      const task = CopyTask.of({
+        from: join(srcDir, "**/*.txt"),
+        to: destDir,
+        flatten: true,
+      });
       await task.execute();
 
       // All files should be in the root of destDir
@@ -160,33 +158,23 @@ describe("File Tasks", () => {
       // Directory structure should not be preserved
       expect(existsSync(join(destDir, "deeply"))).toBe(false);
     });
-
-    test("flatten supports method chaining", () => {
-      const task = CopyTask.from("src/**/*").to("dist").flatten(true);
-      expect(task).toBeInstanceOf(CopyTask);
-    });
   });
 
   describe("MkdirTask", () => {
-    test("creates task with fluent API", () => {
-      const task = MkdirTask.paths("dir1", "dir2");
+    test("creates task with object config", () => {
+      const task = MkdirTask.of({ paths: ["dir1", "dir2"] });
       expect(task).toBeInstanceOf(MkdirTask);
     });
 
-    test("validates paths parameter is required", () => {
-      const task = new MkdirTask();
-      expect(() => task.validate()).toThrow("MkdirTask: 'paths' is required");
-    });
-
     test("sets outputs correctly", () => {
-      const task = MkdirTask.paths("dir1", "dir2");
+      const task = MkdirTask.of({ paths: ["dir1", "dir2"] });
       expect(task.outputs).toEqual(["dir1", "dir2"]);
     });
 
     test("creates a single directory", async () => {
       const dirPath = join(testDir, "newdir");
 
-      const task = MkdirTask.paths(dirPath);
+      const task = MkdirTask.of({ paths: [dirPath] });
       await task.execute();
 
       const stats = await stat(dirPath);
@@ -198,7 +186,7 @@ describe("File Tasks", () => {
       const dir2 = join(testDir, "dir2");
       const dir3 = join(testDir, "dir3");
 
-      const task = MkdirTask.paths(dir1, dir2, dir3);
+      const task = MkdirTask.of({ paths: [dir1, dir2, dir3] });
       await task.execute();
 
       expect((await stat(dir1)).isDirectory()).toBe(true);
@@ -209,7 +197,7 @@ describe("File Tasks", () => {
     test("creates nested directories", async () => {
       const nestedPath = join(testDir, "a", "b", "c");
 
-      const task = MkdirTask.paths(nestedPath);
+      const task = MkdirTask.of({ paths: [nestedPath] });
       await task.execute();
 
       const stats = await stat(nestedPath);
@@ -218,8 +206,8 @@ describe("File Tasks", () => {
   });
 
   describe("DeleteTask", () => {
-    test("creates task with fluent API", () => {
-      const task = DeleteTask.paths("file1", "file2");
+    test("creates task with object config", () => {
+      const task = DeleteTask.of({ paths: ["file1", "file2"] });
       expect(task).toBeInstanceOf(DeleteTask);
     });
 
@@ -232,7 +220,7 @@ describe("File Tasks", () => {
       const filePath = join(testDir, "file.txt");
       await writeFile(filePath, "content");
 
-      const task = DeleteTask.paths(filePath);
+      const task = DeleteTask.of({ paths: [filePath] });
       await task.execute();
 
       expect(existsSync(filePath)).toBe(false);
@@ -245,7 +233,7 @@ describe("File Tasks", () => {
       await writeFile(file1, "content1");
       await writeFile(file2, "content2");
 
-      const task = DeleteTask.paths(file1, file2);
+      const task = DeleteTask.of({ paths: [file1, file2] });
       await task.execute();
 
       expect(existsSync(file1)).toBe(false);
@@ -257,32 +245,22 @@ describe("File Tasks", () => {
       await mkdir(join(dirPath, "subdir"), { recursive: true });
       await writeFile(join(dirPath, "file.txt"), "content");
 
-      const task = DeleteTask.paths(dirPath).recursive(true);
+      const task = DeleteTask.of({ paths: [dirPath], recursive: true });
       await task.execute();
 
       expect(existsSync(dirPath)).toBe(false);
     });
 
-    test("supports method chaining", () => {
-      const task = DeleteTask.paths("file").recursive(false);
+    test("supports full configuration", () => {
+      const task = DeleteTask.of({ paths: ["file"], recursive: false });
       expect(task).toBeInstanceOf(DeleteTask);
     });
   });
 
   describe("MoveTask", () => {
-    test("creates task with fluent API", () => {
-      const task = MoveTask.from("src").to("dest");
+    test("creates task with object config", () => {
+      const task = MoveTask.of({ from: "src", to: "dest" });
       expect(task).toBeInstanceOf(MoveTask);
-    });
-
-    test("validates from parameter is required", () => {
-      const task = new MoveTask();
-      expect(() => task.validate()).toThrow("MoveTask: 'from' or 'files' is required");
-    });
-
-    test("validates to parameter is required", () => {
-      const task = MoveTask.from("src");
-      expect(() => task.validate()).toThrow("MoveTask: 'to' is required");
     });
 
     test("moves a file", async () => {
@@ -291,7 +269,7 @@ describe("File Tasks", () => {
 
       await writeFile(srcFile, "test content");
 
-      const task = MoveTask.from(srcFile).to(destFile);
+      const task = MoveTask.of({ from: srcFile, to: destFile });
       await task.execute();
 
       expect(existsSync(srcFile)).toBe(false);
@@ -302,32 +280,22 @@ describe("File Tasks", () => {
     });
 
     test("sets inputs and outputs correctly", () => {
-      const task = MoveTask.from("src").to("dest");
+      const task = MoveTask.of({ from: "src", to: "dest" });
       expect(task.inputs).toBe("src");
       expect(task.outputs).toBe("dest");
     });
   });
 
   describe("CreateFileTask", () => {
-    test("validates path parameter is required", () => {
-      const task = new CreateFileTask();
-      expect(() => task.validate()).toThrow("CreateFileTask: 'path' is required");
-    });
-
-    test("validates content parameter is required", () => {
-      const task = CreateFileTask.path("file.txt");
-      expect(() => task.validate()).toThrow(
-        "CreateFileTask: 'content' is required"
-      );
+    test("creates task with object config", () => {
+      const task = CreateFileTask.of({ path: "file.txt", content: "hello" });
+      expect(task).toBeInstanceOf(CreateFileTask);
     });
 
     test("creates a file with content", async () => {
       const filePath = join(testDir, "newfile.txt");
 
-      const task = CreateFileTask.path(filePath);
-      // Note: Due to a naming conflict bug where the content method
-      // overwrites itself, we set it via type casting
-      (task as any).content = "Hello, World!";
+      const task = CreateFileTask.of({ path: filePath, content: "Hello, World!" });
       await task.execute();
 
       const content = await readFile(filePath, "utf-8");
@@ -337,10 +305,7 @@ describe("File Tasks", () => {
     test("creates file in nested directory", async () => {
       const filePath = join(testDir, "nested", "dir", "file.txt");
 
-      const task = CreateFileTask.path(filePath);
-      // Note: Due to a naming conflict bug where the content method
-      // overwrites itself, we set it via type casting
-      (task as any).content = "nested content";
+      const task = CreateFileTask.of({ path: filePath, content: "nested content" });
       await task.execute();
 
       const content = await readFile(filePath, "utf-8");
@@ -348,7 +313,7 @@ describe("File Tasks", () => {
     });
 
     test("sets outputs correctly", () => {
-      const task = CreateFileTask.path("file.txt");
+      const task = CreateFileTask.of({ path: "file.txt", content: "hello" });
       expect(task.outputs).toBe("file.txt");
     });
   });

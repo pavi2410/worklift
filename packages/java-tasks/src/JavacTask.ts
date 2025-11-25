@@ -8,59 +8,66 @@ import { delimiter } from "path";
 type ClasspathElement = string | string[] | Artifact<string[]>;
 
 /**
+ * Configuration for JavacTask
+ */
+export interface JavacTaskConfig {
+  /** Source files to compile (single file or array) */
+  sources: string | string[];
+  /** Output directory for compiled classes */
+  destination: string;
+  /** Classpath entries (strings, arrays, or artifacts) */
+  classpath?: ClasspathElement[];
+  /** Java source version (e.g., "11", "17") */
+  sourceVersion?: string;
+  /** Java target version (e.g., "11", "17") */
+  targetVersion?: string;
+  /** Source file encoding (e.g., "UTF-8") */
+  encoding?: string;
+}
+
+/**
  * Task for compiling Java source files
  *
  * Supports consuming classpath from artifacts produced by dependency resolution tasks.
+ *
+ * @example
+ * ```typescript
+ * JavacTask.of({
+ *   sources: "src/main/java/com/example/Main.java",
+ *   destination: "build/classes",
+ *   classpath: [deps, "lib/extra.jar"],
+ *   sourceVersion: "11",
+ *   targetVersion: "11",
+ * })
+ * ```
  */
 export class JavacTask extends Task {
-  private srcFiles?: string | string[];
-  private destDir?: string;
-  private classpathElements: ClasspathElement[] = [];
+  private srcFiles: string | string[];
+  private destDir: string;
+  private classpathElements: ClasspathElement[];
   private sourceVer?: string;
   private targetVer?: string;
   private encodingStr?: string;
 
-  inputs?: string | string[];
-  outputs?: string | string[];
+  constructor(config: JavacTaskConfig) {
+    super();
+    this.srcFiles = config.sources;
+    this.destDir = config.destination;
+    this.classpathElements = config.classpath ?? [];
+    this.sourceVer = config.sourceVersion;
+    this.targetVer = config.targetVersion;
+    this.encodingStr = config.encoding;
 
-  static sources(...files: string[]): JavacTask {
-    const task = new JavacTask();
-    task.srcFiles = files.length === 1 ? files[0] : files;
-    task.inputs = task.srcFiles;
-    return task;
-  }
-
-  destination(dir: string): this {
-    this.destDir = dir;
-    this.outputs = dir;
-    return this;
+    // Set inputs/outputs for incremental builds
+    this.inputs = this.srcFiles;
+    this.outputs = this.destDir;
   }
 
   /**
-   * Add classpath entries for compilation.
-   *
-   * Accepts a mix of:
-   * - Individual path strings
-   * - String arrays of paths
-   * - Artifacts containing path arrays (from dependency resolution)
-   *
-   * All elements are resolved and concatenated at execution time.
-   *
-   * @param elements - Classpath elements to add
-   * @returns This task for chaining
-   *
-   * @example
-   * ```typescript
-   * const deps = artifact("deps", z.array(z.string()));
-   *
-   * JavacTask.sources("src/**\/*.java")
-   *   .destination("build/classes")
-   *   .classpath(deps, "lib/extra.jar", ["lib/commons.jar"])
-   * ```
+   * Create a new JavacTask with the given configuration.
    */
-  classpath(...elements: ClasspathElement[]): this {
-    this.classpathElements.push(...elements);
-    return this;
+  static of(config: JavacTaskConfig): JavacTask {
+    return new JavacTask(config);
   }
 
   /**
@@ -83,22 +90,7 @@ export class JavacTask extends Task {
     return resolved;
   }
 
-  sourceVersion(version: string): this {
-    this.sourceVer = version;
-    return this;
-  }
-
-  targetVersion(version: string): this {
-    this.targetVer = version;
-    return this;
-  }
-
-  encoding(encoding: string): this {
-    this.encodingStr = encoding;
-    return this;
-  }
-
-  validate() {
+  override validate() {
     if (!this.srcFiles) {
       throw new Error("JavacTask: 'sources' is required");
     }

@@ -43,64 +43,65 @@ export const MavenRepos = {
 export const DEFAULT_MAVEN_REPOS = [MavenRepos.CENTRAL];
 
 /**
+ * Configuration for MavenDepTask
+ */
+export interface MavenDepTaskConfig {
+  /** Maven coordinates in "group:artifact:version" format */
+  coordinates: string[];
+  /** Maven repositories to resolve from (defaults to Maven Central) */
+  repositories?: string[];
+  /** Artifact to write resolved JAR paths to */
+  into?: Artifact<string[]>;
+}
+
+/**
  * Task for resolving Maven dependencies from Maven repositories.
  *
  * Downloads JAR files to the local Maven repository (~/.m2/repository)
  * and provides their paths for use in compilation or runtime classpath.
  *
- * Supports custom repository configuration and outputs to artifacts.
- *
  * @example
  * ```typescript
  * // Simple resolution from Maven Central (default)
- * MavenDepTask.resolve("org.json:json:20230227")
+ * MavenDepTask.of({
+ *   coordinates: ["org.json:json:20230227"],
+ * })
  *
- * // With custom repositories
- * const repos = [MavenRepos.CENTRAL, MavenRepos.GOOGLE];
- * MavenDepTask.resolve("com.android:android:4.1.1.4").from(repos)
- *
- * // With artifact output
- * const classpath = artifact("compile-classpath", z.array(z.string()));
- * MavenDepTask.resolve("org.json:json:20230227")
- *   .from([MavenRepos.CENTRAL])
- *   .into(classpath)
- *
- * // Programmatically create multiple tasks
- * const deps = ["dep1:dep1:1.0", "dep2:dep2:2.0"];
- * deps.map(d => MavenDepTask.resolve(d).from(repos).into(classpath))
+ * // With custom repositories and artifact output
+ * MavenDepTask.of({
+ *   coordinates: [
+ *     "org.junit.jupiter:junit-jupiter-api:5.9.3",
+ *     "org.junit.jupiter:junit-jupiter-engine:5.9.3",
+ *   ],
+ *   repositories: [MavenRepos.CENTRAL, MavenRepos.GOOGLE],
+ *   into: classpath,
+ * })
  * ```
  */
 export class MavenDepTask extends Task {
-  private coordinates: string[] = [];
+  private coordinates: string[];
   private outputArtifact?: Artifact<string[]>;
-  private repositories: string[] = DEFAULT_MAVEN_REPOS;
+  private repositories: string[];
   private localRepo: string;
 
-  constructor() {
+  constructor(config: MavenDepTaskConfig) {
     super();
     this.localRepo = join(homedir(), ".m2", "repository");
+    this.coordinates = config.coordinates;
+    this.repositories = config.repositories ?? DEFAULT_MAVEN_REPOS;
+    this.outputArtifact = config.into;
+
+    // Pre-compute output paths for incremental build checking
+    this.outputs = this.coordinates.map(coord =>
+      this.getLocalJarPath(this.parseCoordinates(coord))
+    );
   }
 
   /**
-   * Create a new MavenDepTask to resolve the specified dependencies.
-   *
-   * @param coords - One or more Maven coordinates in "group:artifact:version" format
-   * @returns A new MavenDepTask instance
-   *
-   * @example
-   * ```typescript
-   * MavenDepTask.resolve(
-   *   "org.json:json:20230227",
-   *   "commons-lang:commons-lang:2.6"
-   * )
-   * ```
+   * Create a new MavenDepTask with the given configuration.
    */
-  static resolve(...coords: string[]): MavenDepTask {
-    const task = new MavenDepTask();
-    task.coordinates = coords;
-    // Pre-compute output paths for incremental build checking
-    task.outputs = coords.map(coord => task.getLocalJarPath(task.parseCoordinates(coord)));
-    return task;
+  static of(config: MavenDepTaskConfig): MavenDepTask {
+    return new MavenDepTask(config);
   }
 
   /**
@@ -117,48 +118,6 @@ export class MavenDepTask extends Task {
       version,
       jarFileName
     );
-  }
-
-  /**
-   * Specify Maven repositories to resolve dependencies from.
-   * Repositories are tried in order until a dependency is found.
-   *
-   * @param repos - Array of repository base URLs
-   * @returns This task for chaining
-   *
-   * @example
-   * ```typescript
-   * const repos = [MavenRepos.CENTRAL, MavenRepos.GOOGLE];
-   * MavenDepTask.resolve("com.android:android:4.1.1.4").from(repos)
-   *
-   * // Or with custom URLs
-   * const customRepos = [
-   *   "https://my-company.com/maven",
-   *   "https://repo1.maven.org/maven2"
-   * ];
-   * MavenDepTask.resolve("com.example:lib:1.0").from(customRepos)
-   * ```
-   */
-  from(repos: string[]): this {
-    this.repositories = repos;
-    return this;
-  }
-
-  /**
-   * Specify an artifact to write the resolved JAR paths to.
-   *
-   * @param artifact - Artifact to receive the array of JAR paths
-   * @returns This task for chaining
-   *
-   * @example
-   * ```typescript
-   * const classpath = artifact("compile-classpath", z.array(z.string()));
-   * MavenDepTask.resolve("org.json:json:20230227").into(classpath)
-   * ```
-   */
-  into(artifact: Artifact<string[]>): this {
-    this.outputArtifact = artifact;
-    return this;
   }
 
   async execute(): Promise<void> {
@@ -189,7 +148,7 @@ export class MavenDepTask extends Task {
    * Override validate to also populate artifact if outputs already exist.
    * This ensures the artifact is available even when task is skipped.
    */
-  validate(): void {
+  override validate(): void {
     super.validate();
 
     if (!this.coordinates || this.coordinates.length === 0) {
@@ -218,7 +177,7 @@ export class MavenDepTask extends Task {
    * Parse Maven coordinates string into components
    */
   private parseCoordinates(coord: string): MavenCoordinates {
-    const [groupId, artifactId, version] = coord.split(":");
+    const [groupId, artifactId, version] = coord.split(":") as [string, string, string];
     return { groupId, artifactId, version };
   }
 

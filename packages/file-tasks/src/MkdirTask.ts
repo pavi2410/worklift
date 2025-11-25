@@ -2,29 +2,42 @@ import { Task } from "@worklift/core";
 import { mkdir } from "fs/promises";
 
 /**
- * Task for creating directories
+ * Configuration for MkdirTask
+ */
+export interface MkdirTaskConfig {
+  /** Paths to create */
+  paths: string[];
+}
+
+/**
+ * Task for creating directories.
+ *
+ * @example
+ * ```typescript
+ * MkdirTask.of({ paths: ["build", "dist"] })
+ * ```
  */
 export class MkdirTask extends Task {
-  private pathList?: string[];
+  private pathList: string[];
 
-  inputs?: string | string[];
-  outputs?: string | string[];
-
-  static paths(...paths: string[]): MkdirTask {
-    const task = new MkdirTask();
-    task.pathList = paths;
-    task.outputs = paths;
-    return task;
+  constructor(config: MkdirTaskConfig) {
+    super();
+    this.pathList = config.paths;
+    this.outputs = this.pathList;
   }
 
-  validate() {
+  static of(config: MkdirTaskConfig): MkdirTask {
+    return new MkdirTask(config);
+  }
+
+  override validate() {
     if (!this.pathList || this.pathList.length === 0) {
       throw new Error("MkdirTask: 'paths' is required");
     }
   }
 
   async execute() {
-    for (const path of this.pathList!) {
+    for (const path of this.pathList) {
       await mkdir(path, { recursive: true });
     }
   }

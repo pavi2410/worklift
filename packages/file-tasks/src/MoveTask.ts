@@ -4,43 +4,50 @@ import { relative, join, dirname, basename } from "path";
 import { FileSet } from "./FileSet.ts";
 
 /**
+ * Configuration for MoveTask
+ */
+export interface MoveTaskConfig {
+  /** Source path */
+  from?: string;
+  /** FileSet for moving multiple files */
+  files?: FileSet;
+  /** Destination path */
+  to: string;
+  /** Flatten directory structure (default: false) */
+  flatten?: boolean;
+}
+
+/**
  * Task for moving/renaming files or directories.
- * Use FileSet for moving multiple files.
+ *
+ * @example
+ * ```typescript
+ * MoveTask.of({ from: "old.txt", to: "new.txt" })
+ * MoveTask.of({ files: FileSet.from("src"), to: "dist", flatten: true })
+ * ```
  */
 export class MoveTask extends Task {
   private fromPath?: string;
   private fileSet?: FileSet;
-  private toPath?: string;
-  private flattenFlag = false;
+  private toPath: string;
+  private flattenFlag: boolean;
 
-  inputs?: string | string[];
-  outputs?: string | string[];
+  constructor(config: MoveTaskConfig) {
+    super();
+    this.fromPath = config.from;
+    this.fileSet = config.files;
+    this.toPath = config.to;
+    this.flattenFlag = config.flatten ?? false;
 
-  static from(path: string): MoveTask {
-    const task = new MoveTask();
-    task.fromPath = path;
-    task.inputs = path;
-    return task;
+    if (this.fromPath) this.inputs = this.fromPath;
+    this.outputs = this.toPath;
   }
 
-  static files(fileSet: FileSet): MoveTask {
-    const task = new MoveTask();
-    task.fileSet = fileSet;
-    return task;
+  static of(config: MoveTaskConfig): MoveTask {
+    return new MoveTask(config);
   }
 
-  to(path: string): this {
-    this.toPath = path;
-    this.outputs = path;
-    return this;
-  }
-
-  flatten(value: boolean): this {
-    this.flattenFlag = value;
-    return this;
-  }
-
-  validate() {
+  override validate() {
     if (!this.fromPath && !this.fileSet) {
       throw new Error("MoveTask: 'from' or 'files' is required");
     }
