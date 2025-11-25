@@ -2,7 +2,7 @@
   "lockfileVersion": 1,
   "workspaces": {
     "": {
-      "name": "worklift",
+      "name": "worklift-monorepo",
       "dependencies": {
         "commander": "^14.0.2",
         "glob": "^13.0.0",

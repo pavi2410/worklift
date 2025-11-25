@@ -1,5 +1,6 @@
 import { resolve, isAbsolute } from "path";
 import { existsSync } from "fs";
+import { pathToFileURL } from "url";
 import { Logger } from "@worklift/core";
 
 export interface BuildFileOptions {
@@ -27,8 +28,10 @@ export async function loadBuildFile(
   logger.debug(`Loading build file: ${buildFilePath}`);
 
   // Import the build file (Bun/Node with tsx handles TypeScript)
+  // Convert to file:// URL for proper ESM import on all platforms
   try {
-    await import(buildFilePath);
+    const fileURL = pathToFileURL(buildFilePath).href;
+    await import(fileURL);
     logger.debug("Build file loaded successfully");
   } catch (error) {
     throw new Error(

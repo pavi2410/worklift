@@ -1,4 +1,5 @@
-import { LogLevel, LogEntry, LogFormatter } from "./types.ts";
+import type { LogEntry, LogFormatter } from "./types.ts";
+import { LogLevel } from "./types.ts";
 import { ExternalCommandError } from "../errors.ts";
 
 /**
@@ -117,6 +118,9 @@ export class InteractiveFormatter implements LogFormatter {
 
   private getSpinner(): string {
     const frame = this.spinnerFrames[this.spinnerIndex];
+    if (!frame) {
+      return "";
+    }
     this.spinnerIndex = (this.spinnerIndex + 1) % this.spinnerFrames.length;
     return this.colorCyan(frame);
   }

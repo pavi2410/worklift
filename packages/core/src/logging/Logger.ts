@@ -1,4 +1,5 @@
-import { LogLevel, LogEntry, LogFormatter } from "./types.ts";
+import type { LogEntry, LogFormatter } from "./types.ts";
+import { LogLevel } from "./types.ts";
 import {
   SimpleFormatter,
   VerboseFormatter,
@@ -156,8 +157,8 @@ export class Logger {
       timestamp: new Date(),
       level,
       message,
-      projectName: context.projectName,
-      targetName: context.targetName,
+      projectName: context?.projectName,
+      targetName: context?.targetName,
       error,
     };
 

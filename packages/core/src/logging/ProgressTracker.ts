@@ -1,5 +1,6 @@
 import { clearLine, cursorTo, moveCursor } from "readline";
-import { LogLevel, LogEntry } from "./types.ts";
+import type { LogEntry } from "./types.ts";
+import { LogLevel } from "./types.ts";
 import { InteractiveFormatter } from "./formatters.ts";
 
 interface ProgressLine {

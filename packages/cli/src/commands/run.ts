@@ -76,6 +76,10 @@ async function executeTarget(
     // Just target name - use first/default project
     const targetName = parts[0];
 
+    if (!targetName) {
+      throw new Error("Target name cannot be empty");
+    }
+
     if (registry.size === 0) {
       throw new Error("No projects defined in build file");
     }
@@ -87,10 +91,18 @@ async function executeTarget(
     }
 
     const project = Array.from(registry.values())[0];
+    if (!project) {
+      throw new Error("No project available");
+    }
     await project.execute(targetName);
   } else if (parts.length === 2) {
     // project:target
     const [projectName, targetName] = parts;
+
+    if (!projectName || !targetName) {
+      throw new Error("Project name and target name cannot be empty");
+    }
+
     const project = registry.get(projectName);
 
     if (!project) {

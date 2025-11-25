@@ -52,6 +52,53 @@ import { JavacTask } from "@worklift/java-tasks";
 bun install
 ```
 
+## Development Setup
+
+### Running Worklift CLI
+
+No build step required! Bun executes TypeScript natively.
+
+**Direct invocation (Recommended)**
+
+From any directory in the repository, use a relative path to the CLI source:
+
+```bash
+# From examples/java-maven-project/
+bun ../../packages/cli/src/index.ts list
+bun ../../packages/cli/src/index.ts string-utils:build
+
+# From examples/java-project/
+bun ../../packages/cli/src/index.ts build
+
+# From repository root
+bun packages/cli/src/index.ts list
+```
+
+**Using the root npm script**
+
+From the repository root:
+
+```bash
+bun run worklift list
+bun run worklift build
+```
+
+### Example: Running from the Java Maven Project
+
+```bash
+cd examples/java-maven-project
+
+# List all available targets
+bun ../../packages/cli/src/index.ts list
+
+# Run specific targets
+bun ../../packages/cli/src/index.ts string-utils:build
+bun ../../packages/cli/src/index.ts app:run
+
+# Run multiple targets
+bun ../../packages/cli/src/index.ts string-utils:clean string-utils:build app:build
+```
+
 ## Quick Start
 
 Instead of XML like Apache Ant:

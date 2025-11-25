@@ -4,11 +4,7 @@
   "type": "module",
   "description": "CLI for Worklift build tool",
   "bin": {
-    "worklift": "./dist/index.js"
-  },
-  "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch"
+    "worklift": "./src/index.ts"
   },
   "dependencies": {
     "@worklift/core": "workspace:*",

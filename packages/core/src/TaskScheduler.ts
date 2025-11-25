@@ -1,5 +1,5 @@
 import { Task } from "./Task.ts";
-import { stat, exists } from "fs/promises";
+import { stat, access, constants } from "fs/promises";
 import { Logger } from "./logging/index.ts";
 
 interface TaskNode {
@@ -54,6 +54,7 @@ export class TaskScheduler {
       const nodeA = nodes[i];
       for (let j = i + 1; j < nodes.length; j++) {
         const nodeB = nodes[j];
+        if (!nodeB) continue;
 
         // Check if A's outputs overlap with B's inputs
         const aToB = this.hasPathOverlap(nodeA.outputs, nodeB.inputs);
@@ -229,7 +230,16 @@ export class TaskScheduler {
     }
 
     // Check if all outputs exist
-    const outputsExist = await Promise.all(outputs.map((o) => exists(o)));
+    const outputsExist = await Promise.all(
+      outputs.map(async (o) => {
+        try {
+          await access(o, constants.F_OK);
+          return true;
+        } catch {
+          return false;
+        }
+      })
+    );
     if (outputsExist.some((e) => !e)) {
       return false;
     }
