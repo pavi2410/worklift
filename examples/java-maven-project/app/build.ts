@@ -16,6 +16,7 @@ import {
   JavaTask,
   JarTask,
   MavenDepTask,
+  JUnitTask,
 } from "@worklift/java-tasks";
 import { DeleteTask } from "@worklift/file-tasks";
 import { z } from "zod";
@@ -93,16 +94,16 @@ export const test = app
   .target("test")
   .dependsOn(compileTests)
   .tasks([
-    JavaTask.of({
-      mainClass: "org.junit.platform.console.ConsoleLauncher",
+    JUnitTask.of({
+      testClasses: "build/test-classes",
       classpath: [
         stringUtils.junitClasspath,
         appDependencies,
         "../string-utils/build/libs/string-utils.jar",
         "build/classes",
-        "build/test-classes",
       ],
-      args: ["--scan-classpath", "build/test-classes", "--fail-if-no-tests"],
+      reports: "build/reports",
+      version: 5,
     }),
   ]);
 

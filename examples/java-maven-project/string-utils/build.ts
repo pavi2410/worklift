@@ -9,9 +9,10 @@
 import { project, artifact } from "@worklift/core";
 import {
   JavacTask,
-  JavaTask,
   JarTask,
   MavenDepTask,
+  JUnitTask,
+  JUNIT5_DEPS,
 } from "@worklift/java-tasks";
 import { DeleteTask } from "@worklift/file-tasks";
 import { z } from "zod";
@@ -40,15 +41,7 @@ export const resolveDeps = stringUtils
   .produces(junitClasspath)
   .tasks([
     MavenDepTask.of({
-      coordinates: [
-        "org.junit.jupiter:junit-jupiter-api:5.9.3",
-        "org.junit.jupiter:junit-jupiter-engine:5.9.3",
-        "org.junit.platform:junit-platform-console:1.9.3",
-        "org.junit.platform:junit-platform-engine:1.9.3",
-        "org.junit.platform:junit-platform-commons:1.9.3",
-        "org.junit.platform:junit-platform-launcher:1.9.3",
-        "org.opentest4j:opentest4j:1.2.0",
-      ],
+      coordinates: JUNIT5_DEPS,
       into: junitClasspath,
     }),
   ]);
@@ -87,10 +80,11 @@ export const test = stringUtils
   .target("test")
   .dependsOn(compileTests)
   .tasks([
-    JavaTask.of({
-      mainClass: "org.junit.platform.console.ConsoleLauncher",
-      classpath: [junitClasspath, "build/classes", "build/test-classes"],
-      args: ["--scan-classpath", "build/test-classes", "--fail-if-no-tests"],
+    JUnitTask.of({
+      testClasses: "build/test-classes",
+      classpath: [junitClasspath, "build/classes"],
+      reports: "build/reports",
+      version: 5,
     }),
   ]);
 
