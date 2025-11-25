@@ -24,8 +24,10 @@ const resolveFromCentral = app
   .target("resolve-from-central")
   .produces(compileClasspath)
   .tasks([
-    // No .from() specified - defaults to Maven Central
-    MavenDepTask.resolve("org.json:json:20230227").into(compileClasspath),
+    MavenDepTask.of({
+      coordinates: ["org.json:json:20230227"],
+      into: compileClasspath,
+    }),
   ]);
 
 // ===== Example 2: Multiple well-known repositories =====
@@ -39,10 +41,11 @@ const resolveFromMultiple = app
   .target("resolve-from-multiple")
   .produces(androidClasspath)
   .tasks([
-    // Will try each repository in order
-    MavenDepTask.resolve("com.google.android:android:4.1.1.4")
-      .from(mavenRepos)
-      .into(androidClasspath),
+    MavenDepTask.of({
+      coordinates: ["com.google.android:android:4.1.1.4"],
+      repositories: mavenRepos,
+      into: androidClasspath,
+    }),
   ]);
 
 // ===== Example 3: Custom repository URLs =====
@@ -54,9 +57,10 @@ const customRepos = [
 const resolveFromCustom = app
   .target("resolve-from-custom")
   .tasks([
-    MavenDepTask.resolve("com.example:proprietary-lib:1.0.0").from(
-      customRepos
-    ),
+    MavenDepTask.of({
+      coordinates: ["com.example:proprietary-lib:1.0.0"],
+      repositories: customRepos,
+    }),
   ]);
 
 // ===== Example 4: Programmatic dependency list - "Just use JavaScript!" =====
@@ -74,10 +78,11 @@ const resolveAllDeps = app
   .target("resolve-all-deps")
   .produces(allClasspath)
   .tasks([
-    // Spread operator - resolves all deps in a single task
-    MavenDepTask.resolve(...dependencies)
-      .from(mavenRepos)
-      .into(allClasspath),
+    MavenDepTask.of({
+      coordinates: dependencies,
+      repositories: mavenRepos,
+      into: allClasspath,
+    }),
   ]);
 
 // ===== Example 5: Different repos for different dependency types =====
@@ -92,38 +97,30 @@ const resolveByType = app
   .target("resolve-by-type")
   .produces(springClasspath, apacheClasspath)
   .tasks([
-    // Spring dependencies from Spring repos
-    MavenDepTask.resolve("org.springframework:spring-core:5.3.23")
-      .from(springRepos)
-      .into(springClasspath),
-
-    // Apache dependencies from Apache repos
-    MavenDepTask.resolve("org.apache.commons:commons-lang3:3.12.0")
-      .from(apacheRepos)
-      .into(apacheClasspath),
+    MavenDepTask.of({
+      coordinates: ["org.springframework:spring-core:5.3.23"],
+      repositories: springRepos,
+      into: springClasspath,
+    }),
+    MavenDepTask.of({
+      coordinates: ["org.apache.commons:commons-lang3:3.12.0"],
+      repositories: apacheRepos,
+      into: apacheClasspath,
+    }),
   ]);
 
 // ===== Example 6: Advanced - Dynamic dependency resolution =====
-// Helper function for reusable dependency resolution
-function resolveDependencies(
-  deps: string[],
-  repos: string[],
-  outputArtifact: any
-): MavenDepTask {
-  return MavenDepTask.resolve(...deps).from(repos).into(outputArtifact);
-}
-
 const dynamicClasspath = artifact("dynamic-classpath", z.array(z.string()));
 
 const resolveDynamic = app
   .target("resolve-dynamic")
   .produces(dynamicClasspath)
   .tasks([
-    resolveDependencies(
-      ["org.json:json:20230227", "com.google.guava:guava:31.1-jre"],
-      [MavenRepos.CENTRAL, MavenRepos.GOOGLE],
-      dynamicClasspath
-    ),
+    MavenDepTask.of({
+      coordinates: ["org.json:json:20230227", "com.google.guava:guava:31.1-jre"],
+      repositories: [MavenRepos.CENTRAL, MavenRepos.GOOGLE],
+      into: dynamicClasspath,
+    }),
   ]);
 
 /**
@@ -142,9 +139,9 @@ console.log("Examples:");
 console.log("  1. Default (Maven Central)");
 console.log("  2. Multiple well-known repos");
 console.log("  3. Custom repo URLs");
-console.log("  4. Programmatic dependency list with spread operator");
+console.log("  4. Programmatic dependency list");
 console.log("  5. Different repos for different dependency types");
-console.log("  6. Dynamic dependency resolution with helper functions\n");
+console.log("  6. Dynamic dependency resolution\n");
 
 console.log("To run an example:");
 console.log('  await app.execute("resolve-from-central")');

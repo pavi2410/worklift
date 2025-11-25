@@ -45,8 +45,8 @@ const documentation = FileSet.union(
 // ============================================================================
 
 const copySourceFiles = app.target("copy-sources").tasks([
-  CopyTask.files(sourceFiles).to("build/src"),
-  CopyTask.files(configFiles).to("build/config"),
+  CopyTask.of({ files: sourceFiles, to: "build/src" }),
+  CopyTask.of({ files: configFiles, to: "build/config" }),
 ]);
 
 // ============================================================================
@@ -54,9 +54,11 @@ const copySourceFiles = app.target("copy-sources").tasks([
 // ============================================================================
 
 const compileAndCopy = app.target("compile").tasks([
-  CopyTask.files(sourceFiles)
-    .to("dist/compiled")
-    .rename(/\.ts$/, ".js"),  // Rename .ts to .js
+  CopyTask.of({
+    files: sourceFiles,
+    to: "dist/compiled",
+    rename: { pattern: /\.ts$/, replacement: ".js" },
+  }),
 ]);
 
 // ============================================================================
@@ -64,10 +66,7 @@ const compileAndCopy = app.target("compile").tasks([
 // ============================================================================
 
 const flattenAssets = app.target("flatten").tasks([
-  // Copy all assets to a single flat directory
-  CopyTask.files(staticAssets)
-    .to("dist/assets")
-    .flatten(true),
+  CopyTask.of({ files: staticAssets, to: "dist/assets", flatten: true }),
 ]);
 
 // ============================================================================
@@ -76,17 +75,17 @@ const flattenAssets = app.target("flatten").tasks([
 
 const createArchives = app.target("archive").tasks([
   // Create source code archive
-  ZipTask.files(sourceFiles).to("dist/sources.zip"),
+  ZipTask.of({ files: sourceFiles, to: "dist/sources.zip" }),
 
   // Create documentation archive
-  ZipTask.files(documentation).to("dist/docs.zip"),
+  ZipTask.of({ files: documentation, to: "dist/docs.zip" }),
 
   // Create distribution archive with multiple FileSets
-  CopyTask.files(sourceFiles).to("temp/dist/src"),
-  CopyTask.files(configFiles).to("temp/dist/config"),
-  CopyTask.files(staticAssets).to("temp/dist/assets"),
-  ZipTask.from("temp/dist").to("dist/release.zip"),
-  DeleteTask.paths("temp"),
+  CopyTask.of({ files: sourceFiles, to: "temp/dist/src" }),
+  CopyTask.of({ files: configFiles, to: "temp/dist/config" }),
+  CopyTask.of({ files: staticAssets, to: "temp/dist/assets" }),
+  ZipTask.of({ from: "temp/dist", to: "dist/release.zip" }),
+  DeleteTask.of({ paths: ["temp"] }),
 ]);
 
 // ============================================================================
@@ -94,10 +93,7 @@ const createArchives = app.target("archive").tasks([
 // ============================================================================
 
 const organizeFiles = app.target("organize").tasks([
-  // Move test files to a separate directory
-  MoveTask.files(testFiles)
-    .to("tests")
-    .flatten(false),  // Preserve directory structure
+  MoveTask.of({ files: testFiles, to: "tests", flatten: false }),
 ]);
 
 // ============================================================================
@@ -105,17 +101,12 @@ const organizeFiles = app.target("organize").tasks([
 // ============================================================================
 
 const cleanTemp = app.target("clean-temp").tasks([
-  // Delete all temporary files using FileSet
-  DeleteTask.files(
-    FileSet.dir("build")
-      .include("**/*.tmp", "**/*.log", "**/.DS_Store")
-  ),
-
-  // Clean build artifacts
-  DeleteTask.files(
-    FileSet.dir(".")
-      .include("**/node_modules/**/.cache/**", "**/dist/**/*.map")
-  ),
+  DeleteTask.of({
+    files: FileSet.dir("build").include("**/*.tmp", "**/*.log", "**/.DS_Store"),
+  }),
+  DeleteTask.of({
+    files: FileSet.dir(".").include("**/node_modules/**/.cache/**", "**/dist/**/*.map"),
+  }),
 ]);
 
 // ============================================================================
@@ -125,24 +116,17 @@ const cleanTemp = app.target("clean-temp").tasks([
 const productionBuild = app.target("production")
   .dependsOn(cleanTemp)
   .tasks([
-    // Copy production sources (with rename)
-    CopyTask.files(sourceFiles)
-      .to("dist/app")
-      .rename(/\.ts$/, ".js"),
-
-    // Copy production config only
-    CopyTask.files(
-      FileSet.dir("config")
-        .include("**/*.json")
-        .exclude("**/*-dev.*", "**/*-test.*")
-    ).to("dist/config"),
-
-    // Optimize and copy assets
-    CopyTask.files(staticAssets)
-      .to("dist/assets"),
-
-    // Create release package
-    ZipTask.from("dist").to("releases/app-v1.0.0.zip"),
+    CopyTask.of({
+      files: sourceFiles,
+      to: "dist/app",
+      rename: { pattern: /\.ts$/, replacement: ".js" },
+    }),
+    CopyTask.of({
+      files: FileSet.dir("config").include("**/*.json").exclude("**/*-dev.*", "**/*-test.*"),
+      to: "dist/config",
+    }),
+    CopyTask.of({ files: staticAssets, to: "dist/assets" }),
+    ZipTask.of({ from: "dist", to: "releases/app-v1.0.0.zip" }),
   ]);
 
 // ============================================================================
@@ -150,17 +134,12 @@ const productionBuild = app.target("production")
 // ============================================================================
 
 const selectiveCopy = app.target("selective").tasks([
-  // Copy only specific file types, excluding certain directories
-  CopyTask.files(
-    FileSet.dir("src")
+  CopyTask.of({
+    files: FileSet.dir("src")
       .include("**/*.ts", "**/*.tsx", "**/*.css")
-      .exclude(
-        "**/node_modules/**",
-        "**/*.test.*",
-        "**/coverage/**",
-        "**/__mocks__/**"
-      )
-  ).to("dist/app"),
+      .exclude("**/node_modules/**", "**/*.test.*", "**/coverage/**", "**/__mocks__/**"),
+    to: "dist/app",
+  }),
 ]);
 
 // ============================================================================
@@ -168,16 +147,15 @@ const selectiveCopy = app.target("selective").tasks([
 // ============================================================================
 
 const combineMultipleSources = app.target("combine").tasks([
-  // Create a combined archive from multiple sources
-  CopyTask.files(
-    FileSet.union(
+  CopyTask.of({
+    files: FileSet.union(
       FileSet.dir("frontend/src").include("**/*.ts", "**/*.tsx"),
       FileSet.dir("backend/src").include("**/*.ts"),
       FileSet.dir("shared/lib").include("**/*.ts")
-    )
-  )
-    .to("dist/all-sources")
-    .rename(/\.tsx?$/, ".js"),
+    ),
+    to: "dist/all-sources",
+    rename: { pattern: /\.tsx?$/, replacement: ".js" },
+  }),
 ]);
 
 // ============================================================================
@@ -185,42 +163,26 @@ const combineMultipleSources = app.target("combine").tasks([
 // ============================================================================
 
 const deployWebApp = app.target("deploy-webapp").tasks([
-  // Step 1: Copy compiled JavaScript
-  CopyTask.files(
-    FileSet.dir("src")
-      .include("**/*.ts", "**/*.tsx")
-      .exclude("**/*.test.*", "**/__tests__/**")
-  )
-    .to("deploy/app")
-    .rename(/\.tsx?$/, ".js"),
-
-  // Step 2: Copy optimized assets
-  CopyTask.files(
-    FileSet.dir("public")
-      .include("**/*.png", "**/*.jpg", "**/*.svg", "**/*.webp")
-      .exclude("**/original/**", "**/*.psd")
-  )
-    .to("deploy/assets")
-    .flatten(true),
-
-  // Step 3: Copy production config
-  CopyTask.files(
-    FileSet.dir("config")
-      .include("**/*.json", "**/*.env.production")
-      .exclude("**/*.dev.*", "**/*.local.*")
-  ).to("deploy/config"),
-
-  // Step 4: Copy HTML templates
-  CopyTask.files(
-    FileSet.dir("templates")
-      .include("**/*.html")
-  ).to("deploy/templates"),
-
-  // Step 5: Create deployment archive
-  ZipTask.from("deploy").to("releases/webapp-deploy.zip"),
-
-  // Step 6: Cleanup temporary deploy directory
-  DeleteTask.paths("deploy"),
+  CopyTask.of({
+    files: FileSet.dir("src").include("**/*.ts", "**/*.tsx").exclude("**/*.test.*", "**/__tests__/**"),
+    to: "deploy/app",
+    rename: { pattern: /\.tsx?$/, replacement: ".js" },
+  }),
+  CopyTask.of({
+    files: FileSet.dir("public").include("**/*.png", "**/*.jpg", "**/*.svg", "**/*.webp").exclude("**/original/**", "**/*.psd"),
+    to: "deploy/assets",
+    flatten: true,
+  }),
+  CopyTask.of({
+    files: FileSet.dir("config").include("**/*.json", "**/*.env.production").exclude("**/*.dev.*", "**/*.local.*"),
+    to: "deploy/config",
+  }),
+  CopyTask.of({
+    files: FileSet.dir("templates").include("**/*.html"),
+    to: "deploy/templates",
+  }),
+  ZipTask.of({ from: "deploy", to: "releases/webapp-deploy.zip" }),
+  DeleteTask.of({ paths: ["deploy"] }),
 ]);
 
 // ============================================================================

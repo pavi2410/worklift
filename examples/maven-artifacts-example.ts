@@ -26,42 +26,39 @@ const compileClasspath = artifact("compile-classpath", z.array(z.string()));
 const testClasspath = artifact("test-classpath", z.array(z.string()));
 
 // Clean build directory
-const clean = app.target("clean").tasks([DeleteTask.paths("build")]);
+const clean = app.target("clean").tasks([DeleteTask.of({ paths: ["build"] })]);
 
 // Create build directories
 const prepare = app
   .target("prepare")
   .dependsOn(clean)
   .tasks([
-    MkdirTask.paths("build/classes"),
-    MkdirTask.paths("build/test-classes"),
+    MkdirTask.of({ paths: ["build/classes"] }),
+    MkdirTask.of({ paths: ["build/test-classes"] }),
   ]);
 
 // Resolve compile-time dependencies
 // Produces an artifact containing paths to downloaded JARs
 const resolveDepsForCompile = app
   .target("resolve-deps-for-compile")
-  .produces(compileClasspath) // Declare that this target produces the artifact
+  .produces(compileClasspath)
   .tasks([
-    // Resolve multiple dependencies in a single task
-    // .from() is optional - defaults to Maven Central
-    // .from([MavenRepos.CENTRAL, MavenRepos.GOOGLE]) for custom repos
-    MavenDepTask.resolve(
-      "org.json:json:20230227",
-      "com.google.guava:guava:31.1-jre"
-    ).into(compileClasspath), // Write resolved paths into the artifact
+    MavenDepTask.of({
+      coordinates: ["org.json:json:20230227", "com.google.guava:guava:31.1-jre"],
+      into: compileClasspath,
+    }),
   ]);
 
 // Resolve test-time dependencies (includes compile deps + test-only deps)
 const resolveDepsForTest = app
   .target("resolve-deps-for-test")
-  .dependsOn(resolveDepsForCompile) // Ensure compile deps are resolved first
+  .dependsOn(resolveDepsForCompile)
   .produces(testClasspath)
   .tasks([
-    MavenDepTask.resolve(
-      "commons-lang:commons-lang:2.6",
-      "junit:junit:4.13.2"
-    ).into(testClasspath),
+    MavenDepTask.of({
+      coordinates: ["commons-lang:commons-lang:2.6", "junit:junit:4.13.2"],
+      into: testClasspath,
+    }),
   ]);
 
 // Compile source code using resolved dependencies
@@ -69,9 +66,11 @@ const compileSrc = app
   .target("compile-src")
   .dependsOn(prepare, resolveDepsForCompile)
   .tasks([
-    JavacTask.sources("src/**/*.java")
-      .destination("build/classes")
-      .classpath(compileClasspath), // Consume artifact - type-safe!
+    JavacTask.of({
+      sources: "src/**/*.java",
+      destination: "build/classes",
+      classpath: [compileClasspath],
+    }),
   ]);
 
 // Compile tests using both compile and test dependencies
@@ -79,13 +78,11 @@ const compileTest = app
   .target("compile-test")
   .dependsOn(compileSrc, resolveDepsForTest)
   .tasks([
-    JavacTask.sources("test/**/*.java")
-      .destination("build/test-classes")
-      .classpath(
-        compileClasspath, // Artifacts from dependency resolution
-        testClasspath,
-        "build/classes" // Regular string paths work too
-      ),
+    JavacTask.of({
+      sources: "test/**/*.java",
+      destination: "build/test-classes",
+      classpath: [compileClasspath, testClasspath, "build/classes"],
+    }),
   ]);
 
 // Run tests with full classpath
@@ -93,14 +90,11 @@ const test = app
   .target("test")
   .dependsOn(compileSrc, compileTest)
   .tasks([
-    JavaTask.mainClass("com.example.TestRunner")
-      .classpath(
-        compileClasspath, // Mix artifacts
-        testClasspath, // with other artifacts
-        "build/classes", // and regular paths
-        "build/test-classes"
-      )
-      .args(["--verbose"]),
+    JavaTask.of({
+      mainClass: "com.example.TestRunner",
+      classpath: [compileClasspath, testClasspath, "build/classes", "build/test-classes"],
+      args: ["--verbose"],
+    }),
   ]);
 
 // Run the application
@@ -108,10 +102,10 @@ const run = app
   .target("run")
   .dependsOn(compileSrc)
   .tasks([
-    JavaTask.mainClass("com.example.Main").classpath(
-      compileClasspath,
-      "build/classes"
-    ),
+    JavaTask.of({
+      mainClass: "com.example.Main",
+      classpath: [compileClasspath, "build/classes"],
+    }),
   ]);
 
 // Build everything
