@@ -114,7 +114,7 @@ export class JavacTask extends Task {
       ? this.srcFiles
       : [this.srcFiles!];
 
-    const args = ["-d", this.destDir!];
+    const args = ["-encoding", "utf8", "-d", this.destDir!];
 
     // Resolve classpath from all sources (strings, arrays, artifacts, FileSets)
     const classpath = await this.resolveClasspath();
