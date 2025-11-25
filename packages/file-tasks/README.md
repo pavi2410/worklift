@@ -31,7 +31,7 @@ const sources = FileSet.dir("src")
   .exclude("**/*.test.ts");
 
 // Use with tasks
-CopyTask.files(sources).to("build");
+CopyTask.of({ files: sources, to: "build" });
 ```
 
 ### API
@@ -89,182 +89,145 @@ console.log(files); // ['/abs/path/to/src/file1.ts', ...]
 
 ## Tasks
 
-All file tasks support both simple path-based operations and FileSet-based operations.
+All tasks use an object-based configuration via `Task.of({ ... })`.
 
 ### CopyTask
 
 Copy files or directories with support for renaming, flattening, and filtering.
 
-#### API Styles
+#### Configuration
 
-**Simple path-based:**
 ```typescript
-CopyTask.from("src").to("dest")
+interface CopyTaskConfig {
+  from?: string;           // Source path or glob pattern
+  files?: FileSet;         // Use a FileSet as source
+  to: string;              // Destination path
+  recursive?: boolean;     // Copy recursively (default: true)
+  force?: boolean;         // Overwrite existing files (default: true)
+  flatten?: boolean;       // Flatten directory structure (default: false)
+  rename?: {               // Rename files during copy
+    pattern: RegExp;
+    replacement: string;
+  };
+}
 ```
-
-**FileSet-based:**
-```typescript
-CopyTask.files(fileSet).to("dest")
-```
-
-#### Methods
-
-- `.from(path: string)` - Source path or glob pattern
-- `.files(fileSet: FileSet)` - Use a FileSet as source
-- `.to(path: string)` - Destination path
-- `.recursive(value: boolean)` - Copy recursively (default: true)
-- `.force(value: boolean)` - Overwrite existing files (default: true)
-- `.flatten(value: boolean)` - Flatten directory structure (default: false)
-- `.rename(pattern: RegExp, replacement: string)` - Rename files during copy
 
 #### Examples
 
 ```typescript
 // Simple copy
-CopyTask.from("src").to("build");
+CopyTask.of({ from: "src", to: "build" });
 
 // Copy with FileSet filtering
 const sources = FileSet.dir("src")
   .include("**/*.ts")
   .exclude("**/*.test.ts");
-CopyTask.files(sources).to("build");
+CopyTask.of({ files: sources, to: "build" });
 
 // Copy and rename file extensions
-CopyTask.from("src/**/*.ts")
-  .to("dist")
-  .rename(/\.ts$/, ".js");
+CopyTask.of({
+  from: "src/**/*.ts",
+  to: "dist",
+  rename: { pattern: /\.ts$/, replacement: ".js" },
+});
 
 // Copy with FileSet and flatten
-CopyTask.files(sources)
-  .to("dist")
-  .flatten(true);
+CopyTask.of({ files: sources, to: "dist", flatten: true });
 
 // Copy JAR files and strip version numbers
-CopyTask.from("lib/*.jar")
-  .to("dist/lib")
-  .rename(/^(.*)-[\d.]*\.jar$/, "$1.jar");
+CopyTask.of({
+  from: "lib/*.jar",
+  to: "dist/lib",
+  rename: { pattern: /^(.*)-[\d.]*\.jar$/, replacement: "$1.jar" },
+});
 ```
 
 ### MoveTask
 
 Move or rename files and directories.
 
-#### API Styles
+#### Configuration
 
-**Simple path-based:**
 ```typescript
-MoveTask.from("old").to("new")
+interface MoveTaskConfig {
+  from?: string;      // Source path
+  files?: FileSet;    // Use a FileSet as source
+  to: string;         // Destination path
+  flatten?: boolean;  // Flatten directory structure (default: false)
+}
 ```
-
-**FileSet-based:**
-```typescript
-MoveTask.files(fileSet).to("dest")
-```
-
-#### Methods
-
-- `.from(path: string)` - Source path
-- `.files(fileSet: FileSet)` - Use a FileSet as source
-- `.to(path: string)` - Destination path
-- `.flatten(value: boolean)` - Flatten directory structure (default: false)
 
 #### Examples
 
 ```typescript
 // Simple move
-MoveTask.from("temp/file.txt").to("archive/file.txt");
+MoveTask.of({ from: "temp/file.txt", to: "archive/file.txt" });
 
 // Move multiple files with FileSet
-const tempFiles = FileSet.dir("temp")
-  .include("**/*.tmp");
-MoveTask.files(tempFiles).to("archive");
+const tempFiles = FileSet.dir("temp").include("**/*.tmp");
+MoveTask.of({ files: tempFiles, to: "archive" });
 
 // Move and flatten
-MoveTask.files(tempFiles)
-  .to("archive")
-  .flatten(true);
+MoveTask.of({ files: tempFiles, to: "archive", flatten: true });
 ```
 
 ### DeleteTask
 
 Delete files or directories with support for patterns and FileSets.
 
-#### API Styles
+#### Configuration
 
-**Explicit paths:**
 ```typescript
-DeleteTask.paths("file1", "file2")
+interface DeleteTaskConfig {
+  paths?: string[];       // Delete specific paths
+  patterns?: string[];    // Delete files matching patterns
+  files?: FileSet;        // Delete files from a FileSet
+  baseDir?: string;       // Base directory for pattern matching
+  recursive?: boolean;    // Delete recursively (default: true)
+  includeDirs?: boolean;  // Include directories in pattern matching (default: false)
+}
 ```
-
-**Glob patterns:**
-```typescript
-DeleteTask.patterns("**/*.tmp")
-```
-
-**FileSet-based:**
-```typescript
-DeleteTask.files(fileSet)
-```
-
-#### Methods
-
-- `.paths(...paths: string[])` - Delete specific paths
-- `.patterns(...patterns: string[])` - Delete files matching patterns
-- `.files(fileSet: FileSet)` - Delete files from a FileSet
-- `.baseDir(dir: string)` - Base directory for pattern matching
-- `.recursive(value: boolean)` - Delete recursively (default: true)
-- `.includeDirs(value: boolean)` - Include directories in pattern matching (default: false)
 
 #### Examples
 
 ```typescript
 // Delete specific paths
-DeleteTask.paths("build", "dist");
+DeleteTask.of({ paths: ["build", "dist"] });
 
 // Delete using patterns
-DeleteTask.patterns("**/*.tmp", "**/*.log")
-  .baseDir("build");
+DeleteTask.of({ patterns: ["**/*.tmp", "**/*.log"], baseDir: "build" });
 
 // Delete using FileSet
-const tempFiles = FileSet.dir("build")
-  .include("**/*.tmp", "**/*.log");
-DeleteTask.files(tempFiles);
+const tempFiles = FileSet.dir("build").include("**/*.tmp", "**/*.log");
+DeleteTask.of({ files: tempFiles });
 ```
 
 ### ZipTask
 
 Create ZIP archives.
 
-#### API Styles
+#### Configuration
 
-**Simple path-based:**
 ```typescript
-ZipTask.from("src").to("archive.zip")
+interface ZipTaskConfig {
+  from?: string;        // Source directory
+  files?: FileSet;      // Use a FileSet as source
+  to: string;           // Destination ZIP file
+  recursive?: boolean;  // Zip recursively (default: true)
+}
 ```
-
-**FileSet-based:**
-```typescript
-ZipTask.files(fileSet).to("archive.zip")
-```
-
-#### Methods
-
-- `.from(path: string)` - Source directory
-- `.files(fileSet: FileSet)` - Use a FileSet as source
-- `.to(file: string)` - Destination ZIP file
-- `.recursive(value: boolean)` - Zip recursively (default: true)
 
 #### Examples
 
 ```typescript
 // Simple zip
-ZipTask.from("dist").to("releases/app.zip");
+ZipTask.of({ from: "dist", to: "releases/app.zip" });
 
 // Zip selected files using FileSet
 const deployFiles = FileSet.dir("dist")
   .include("**/*.js", "**/*.json")
   .exclude("**/*.map", "**/test/**");
-ZipTask.files(deployFiles).to("releases/app.zip");
+ZipTask.of({ files: deployFiles, to: "releases/app.zip" });
 ```
 
 ### MkdirTask
@@ -272,7 +235,7 @@ ZipTask.files(deployFiles).to("releases/app.zip");
 Create directories.
 
 ```typescript
-MkdirTask.paths("build/classes", "dist", "temp");
+MkdirTask.of({ paths: ["build/classes", "dist", "temp"] });
 ```
 
 ### CreateFileTask
@@ -280,9 +243,11 @@ MkdirTask.paths("build/classes", "dist", "temp");
 Create a file with content.
 
 ```typescript
-CreateFileTask.path("config.json")
-  .content('{"version": "1.0.0"}')
-  .encoding("utf-8");
+CreateFileTask.of({
+  path: "config.json",
+  content: '{"version": "1.0.0"}',
+  encoding: "utf-8",
+});
 ```
 
 ### UnzipTask
@@ -290,9 +255,7 @@ CreateFileTask.path("config.json")
 Extract ZIP archives.
 
 ```typescript
-UnzipTask.file("archive.zip")
-  .to("extracted")
-  .overwrite(true);
+UnzipTask.of({ file: "archive.zip", to: "extracted", overwrite: true });
 ```
 
 ### ExecTask
@@ -300,36 +263,41 @@ UnzipTask.file("archive.zip")
 Execute shell commands.
 
 ```typescript
-ExecTask.command("npm")
-  .args(["install"])
-  .cwd("project")
-  .env({ NODE_ENV: "production" });
+ExecTask.of({
+  command: "npm",
+  args: ["install"],
+  cwd: "project",
+  env: { NODE_ENV: "production" },
+});
 ```
 
-## Migration from Previous API
+## Migration from Fluent API
 
-If you were using the old `include()` and `exclude()` methods on `CopyTask`, migrate to FileSet:
+If you were using the old fluent API, migrate to the object-based API:
 
-**Before:**
+**Before (fluent):**
 ```typescript
 CopyTask.from("src")
-  .include("**/*.ts")
-  .exclude("**/*.test.ts")
-  .to("build");
+  .to("build")
+  .flatten(true);
+
+DeleteTask.paths("build", "dist");
 ```
 
-**After:**
+**After (object-based):**
+```typescript
+CopyTask.of({ from: "src", to: "build", flatten: true });
+
+DeleteTask.of({ paths: ["build", "dist"] });
+```
+
+**With FileSet:**
 ```typescript
 const sources = FileSet.dir("src")
   .include("**/*.ts")
   .exclude("**/*.test.ts");
 
-CopyTask.files(sources).to("build");
-```
-
-**Or use glob directly for simple cases:**
-```typescript
-CopyTask.from("src/**/*.ts").to("build");
+CopyTask.of({ files: sources, to: "build" });
 ```
 
 ## Examples

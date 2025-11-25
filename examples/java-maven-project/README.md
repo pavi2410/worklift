@@ -16,36 +16,34 @@ A comprehensive example demonstrating how to build multi-module Java projects us
 
 ```
 java-maven-project/
-├── build.ts                     # Worklift build script
+├── build.ts                     # Root build script (imports modules)
 ├── README.md                    # This file
-│
 ├── string-utils/                # Library module
+│   ├── build.ts                 # Library build configuration
 │   ├── src/
-│   │   ├── main/java/          # Maven convention: main source code
+│   │   ├── main/java/           # Maven convention: main source code
 │   │   │   └── com/example/utils/
 │   │   │       └── StringUtils.java
-│   │   └── test/java/          # Maven convention: test code
+│   │   └── test/java/           # Maven convention: test code
 │   │       └── com/example/utils/
 │   │           └── StringUtilsTest.java
-│   └── build/                  # Build output (generated)
-│       ├── classes/            # Compiled classes
-│       ├── test-classes/       # Compiled test classes
-│       └── libs/               # JAR files
-│           └── string-utils.jar
-│
-└── app/                        # Application module
+│   └── build/                   # Build output (generated)
+│       ├── classes/
+│       ├── test-classes/
+│       └── libs/string-utils.jar
+└── app/                         # Application module
+    ├── build.ts                 # Application build configuration
     ├── src/
-    │   ├── main/java/          # Maven convention: main source code
+    │   ├── main/java/           # Maven convention: main source code
     │   │   └── com/example/app/
     │   │       └── Application.java
-    │   └── test/java/          # Maven convention: test code
+    │   └── test/java/           # Maven convention: test code
     │       └── com/example/app/
     │           └── ApplicationTest.java
-    └── build/                  # Build output (generated)
-        ├── classes/            # Compiled classes
-        ├── test-classes/       # Compiled test classes
-        └── libs/               # JAR files
-            └── app.jar
+    └── build/                   # Build output (generated)
+        ├── classes/
+        ├── test-classes/
+        └── libs/app.jar
 ```
 
 ## Modules
@@ -132,8 +130,10 @@ const resolveDeps = project
   .target("resolve-deps")
   .produces(junitClasspath)
   .tasks([
-    MavenDepTask.resolve("org.junit.jupiter:junit-jupiter:5.9.3")
-      .into(junitClasspath),
+    MavenDepTask.of({
+      coordinates: ["org.junit.jupiter:junit-jupiter:5.9.3"],
+      into: junitClasspath,
+    }),
   ]);
 ```
 
@@ -145,11 +145,11 @@ const appCompile = app
   .target("compile")
   .dependsOn(stringUtilsJar)  // Ensures library is built first
   .tasks([
-    JavacTask.sources("app/src/main/java/**/*.java")
-      .destination("app/build/classes")
-      .classpath(
-        "string-utils/build/libs/string-utils.jar"  // Use library JAR
-      ),
+    JavacTask.of({
+      sources: "app/src/main/java/**/*.java",
+      destination: "app/build/classes",
+      classpath: ["string-utils/build/libs/string-utils.jar"],
+    }),
   ]);
 ```
 
@@ -159,13 +159,11 @@ const appCompile = app
 const test = project
   .target("test")
   .tasks([
-    JavaTask.mainClass("org.junit.platform.console.ConsoleLauncher")
-      .classpath(junitClasspath, "build/classes", "build/test-classes")
-      .args([
-        "--scan-classpath",
-        "build/test-classes",
-        "--fail-if-no-tests",
-      ]),
+    JavaTask.of({
+      mainClass: "org.junit.platform.console.ConsoleLauncher",
+      classpath: [junitClasspath, "build/classes", "build/test-classes"],
+      args: ["--scan-classpath", "build/test-classes", "--fail-if-no-tests"],
+    }),
   ]);
 ```
 
@@ -175,9 +173,11 @@ const test = project
 const jar = project
   .target("jar")
   .tasks([
-    JarTask.from("build/classes")
-      .to("build/libs/app.jar")
-      .mainClass("com.example.app.Application"),
+    JarTask.of({
+      from: "build/classes",
+      to: "build/libs/app.jar",
+      mainClass: "com.example.app.Application",
+    }),
   ]);
 ```
 

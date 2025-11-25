@@ -114,22 +114,21 @@ Instead of XML like Apache Ant:
 You can write TypeScript:
 
 ```typescript
-import { project } from "worklift";
-import { CopyTask } from "worklift";
-import { JavacTask } from "worklift";
+import { project, CopyTask, JavacTask } from "worklift";
 
 const app = project("app");
 
 const build = app.target("build").tasks([
-  JavacTask.sources("src/**/*.java")
-    .destination("build"),
+  JavacTask.of({
+    sources: "src/**/*.java",
+    destination: "build",
+  }),
 ]);
 
 const test = app.target("test")
   .dependsOn(build)
   .tasks([
-    CopyTask.from("test-data")
-      .to("build/test-data"),
+    CopyTask.of({ from: "test-data", to: "build/test-data" }),
   ]);
 
 // Execute using target reference
@@ -217,11 +216,10 @@ See [DEPENDENCIES.md](DEPENDENCIES.md) for detailed documentation.
 
 ### Tasks
 
-Tasks are the actual build operations. They use a fluent builder pattern and track inputs and outputs for incremental builds:
+Tasks are the actual build operations. They use an object-based configuration and track inputs and outputs for incremental builds:
 
 ```typescript
-CopyTask.from("src/config")
-  .to("build/config")
+CopyTask.of({ from: "src/config", to: "build/config" })
 // Automatically tracks inputs/outputs for incremental builds
 ```
 
@@ -258,52 +256,103 @@ const allSources = FileSet.union(
 );
 
 // Use with tasks
-CopyTask.files(sourceFiles).to("build");
+CopyTask.of({ files: sourceFiles, to: "build" });
 ```
 
 #### File Tasks
 
+All tasks use an object-based configuration via `Task.of({ ... })`:
+
 - **CopyTask**: Copy files or directories
-  - Simple: `CopyTask.from("src").to("dest")`
-  - With FileSet: `CopyTask.files(fileSet).to("dest")`
-  - Options: `.recursive(true).force(true).flatten(true).rename(/\.ts$/, ".js")`
+  ```typescript
+  CopyTask.of({ from: "src", to: "dest" })
+  CopyTask.of({ files: fileSet, to: "dest", flatten: true })
+  CopyTask.of({ from: "src", to: "dest", rename: { pattern: /\.ts$/, replacement: ".js" } })
+  ```
 
 - **MoveTask**: Move/rename files or directories
-  - Simple: `MoveTask.from("old").to("new")`
-  - With FileSet: `MoveTask.files(fileSet).to("dest").flatten(true)`
+  ```typescript
+  MoveTask.of({ from: "old", to: "new" })
+  MoveTask.of({ files: fileSet, to: "dest", flatten: true })
+  ```
 
 - **DeleteTask**: Delete files or directories
-  - Paths: `DeleteTask.paths("file1", "file2")`
-  - Patterns: `DeleteTask.patterns("**/*.tmp").baseDir("build")`
-  - FileSet: `DeleteTask.files(fileSet)`
+  ```typescript
+  DeleteTask.of({ paths: ["file1", "file2"] })
+  DeleteTask.of({ patterns: ["**/*.tmp"], baseDir: "build" })
+  DeleteTask.of({ files: fileSet })
+  ```
 
 - **ZipTask**: Create ZIP archives
-  - Simple: `ZipTask.from("src").to("app.zip")`
-  - With FileSet: `ZipTask.files(fileSet).to("app.zip")`
-
-- **MkdirTask**: Create directories
-  - `MkdirTask.paths(...paths)`
-
-- **CreateFileTask**: Create a file with content
-  - `CreateFileTask.path(file).content(data).encoding('utf-8')`
+  ```typescript
+  ZipTask.of({ from: "src", to: "app.zip" })
+  ZipTask.of({ files: fileSet, to: "app.zip" })
+  ```
 
 - **UnzipTask**: Extract ZIP archives
-  - `UnzipTask.file(path).to(dir).overwrite(true)`
+  ```typescript
+  UnzipTask.of({ file: "app.zip", to: "dest", overwrite: true })
+  ```
+
+- **MkdirTask**: Create directories
+  ```typescript
+  MkdirTask.of({ paths: ["build/classes", "dist"] })
+  ```
+
+- **CreateFileTask**: Create a file with content
+  ```typescript
+  CreateFileTask.of({ path: "config.json", content: "{}" })
+  ```
 
 - **ExecTask**: Execute shell commands
-  - `ExecTask.command(cmd).args([...]).cwd(dir).env({...})`
+  ```typescript
+  ExecTask.of({ command: "npm", args: ["install"], cwd: "./app" })
+  ```
 
 ### @worklift/java-tasks
 
 Java build tasks:
 
 - **JavacTask**: Compile Java source files
-  - `JavacTask.sources(...files).destination(dir).classpath([...]).sourceVersion(ver).targetVersion(ver).encoding(enc)`
+  ```typescript
+  JavacTask.of({
+    sources: "src/**/*.java",
+    destination: "build/classes",
+    classpath: ["lib/*.jar"],
+    sourceVersion: "11",
+    targetVersion: "11",
+  })
+  ```
+
 - **JarTask**: Create JAR files
-  - `JarTask.from(dir).to(file).mainClass(className).manifest(file)`
+  ```typescript
+  JarTask.of({
+    from: "build/classes",
+    to: "dist/app.jar",
+    mainClass: "com.example.Main",
+  })
+  ```
+
 - **JavaTask**: Run Java applications
-  - `JavaTask.mainClass(className).classpath([...]).jvmArgs([...]).args([...])`
-  - `JavaTask.jar(file).jvmArgs([...]).args([...])`
+  ```typescript
+  JavaTask.of({
+    mainClass: "com.example.Main",
+    classpath: ["build/classes", "lib/*.jar"],
+    jvmArgs: ["-Xmx512m"],
+    args: ["--verbose"],
+  })
+  // Or run a JAR directly
+  JavaTask.of({ jar: "app.jar", args: ["--help"] })
+  ```
+
+- **MavenDepTask**: Resolve Maven dependencies
+  ```typescript
+  MavenDepTask.of({
+    coordinates: ["org.json:json:20230227", "com.google.guava:guava:31.1-jre"],
+    repositories: [MavenRepos.CENTRAL, MavenRepos.GOOGLE],
+    into: classpathArtifact,
+  })
+  ```
 
 ### worklift (meta-package)
 
@@ -316,44 +365,46 @@ import { project, CopyTask, MoveTask, JavacTask, ZipTask } from "worklift";
 ## Example
 
 ```typescript
-import { project } from "worklift";
-import { CopyTask, MkdirTask, DeleteTask } from "worklift";
-import { JavacTask, JarTask } from "worklift";
+import { project, CopyTask, MkdirTask, DeleteTask, JavacTask, JarTask } from "worklift";
 
 const app = project("app");
 
 const clean = app.target("clean").tasks([
-  DeleteTask.paths("build", "dist"),
+  DeleteTask.of({ paths: ["build", "dist"] }),
 ]);
 
 const init = app.target("init")
   .dependsOn(clean)
   .tasks([
-    MkdirTask.paths("build/classes", "dist"),
+    MkdirTask.of({ paths: ["build/classes", "dist"] }),
   ]);
 
 const compile = app.target("compile")
   .dependsOn(init)
   .tasks([
-    JavacTask.sources("src/**/*.java")
-      .destination("build/classes")
-      .sourceVersion("11")
-      .targetVersion("11"),
+    JavacTask.of({
+      sources: "src/**/*.java",
+      destination: "build/classes",
+      sourceVersion: "11",
+      targetVersion: "11",
+    }),
   ]);
 
 const packageTarget = app.target("package")
   .dependsOn(compile)
   .tasks([
-    JarTask.from("build/classes")
-      .to("dist/app.jar")
-      .mainClass("com.example.Main"),
+    JarTask.of({
+      from: "build/classes",
+      to: "dist/app.jar",
+      mainClass: "com.example.Main",
+    }),
   ]);
 
 const build = app.target("build")
   .dependsOn(packageTarget)
   .tasks([
-    CopyTask.from("README.md").to("dist/"),
-    CopyTask.from("LICENSE").to("dist/"),
+    CopyTask.of({ from: "README.md", to: "dist/" }),
+    CopyTask.of({ from: "LICENSE", to: "dist/" }),
   ]);
 
 // Execute a target
@@ -386,8 +437,8 @@ const resources = FileSet.dir("resources")
 
 // Use with tasks
 const build = app.target("build").tasks([
-  CopyTask.files(sourceFiles).to("build/src"),
-  CopyTask.files(resources).to("build/resources"),
+  CopyTask.of({ files: sourceFiles, to: "build/src" }),
+  CopyTask.of({ files: resources, to: "build/resources" }),
 ]);
 ```
 
@@ -399,11 +450,6 @@ const runtimeLibs = FileSet.dir("lib")
   .include("**/*.jar")
   .exclude("**/test/**", "**/*-test.jar");
 
-// Production resources only
-const prodResources = FileSet.dir("src")
-  .include("**/*.properties", "**/*.xml")
-  .exclude("**/dev/**", "**/*-local.*");
-
 // Combine multiple FileSets
 const allDocumentation = FileSet.union(
   FileSet.dir("docs").include("**/*.md"),
@@ -412,55 +458,15 @@ const allDocumentation = FileSet.union(
 );
 
 // Use with operations
-const package = app.target("package").tasks([
-  // Copy runtime libraries
-  CopyTask.files(runtimeLibs).to("dist/lib"),
-
-  // Create source archive with rename
-  CopyTask.files(sourceFiles)
-    .to("dist/sources")
-    .rename(/\.ts$/, ".js"),
-
-  // Zip documentation
-  ZipTask.files(allDocumentation).to("dist/docs.zip"),
-
-  // Clean temp files
-  DeleteTask.files(
-    FileSet.dir("build").include("**/*.tmp", "**/*.log")
-  ),
-]);
-```
-
-### Real-World Scenarios
-
-```typescript
-// Web application deployment
-const webApp = FileSet.dir("src")
-  .include("**/*.html", "**/*.css", "**/*.js")
-  .exclude("**/node_modules/**", "**/*.test.js");
-
-const webAssets = FileSet.dir("assets")
-  .include("**/*.png", "**/*.jpg", "**/*.svg")
-  .exclude("**/raw/**");  // Exclude source files
-
-const deploy = app.target("deploy").tasks([
-  CopyTask.files(webApp).to("dist/"),
-  CopyTask.files(webAssets).to("dist/assets").flatten(true),
-]);
-
-// JAR packaging with specific structure
-const classFiles = FileSet.dir("build/classes")
-  .include("**/*.class")
-  .exclude("**/test/**");
-
-const configFiles = FileSet.dir("config")
-  .include("**/*.xml", "**/*.properties");
-
-const packageJar = app.target("jar").tasks([
-  // Combine multiple FileSets into one JAR
-  CopyTask.files(classFiles).to("temp/jar-contents"),
-  CopyTask.files(configFiles).to("temp/jar-contents/META-INF"),
-  JarTask.from("temp/jar-contents").to("dist/app.jar"),
+const packageTarget = app.target("package").tasks([
+  CopyTask.of({ files: runtimeLibs, to: "dist/lib" }),
+  CopyTask.of({
+    files: sourceFiles,
+    to: "dist/sources",
+    rename: { pattern: /\.ts$/, replacement: ".js" },
+  }),
+  ZipTask.of({ files: allDocumentation, to: "dist/docs.zip" }),
+  DeleteTask.of({ files: FileSet.dir("build").include("**/*.tmp", "**/*.log") }),
 ]);
 ```
 
@@ -469,9 +475,8 @@ const packageJar = app.target("jar").tasks([
 Tasks automatically track inputs and outputs. If outputs are newer than inputs, the task is skipped:
 
 ```typescript
-CopyTask.from("src/data")  // input
-  .to("build/data")  // output
-  // Will skip if build/data is newer than src/data
+CopyTask.of({ from: "src/data", to: "build/data" })
+// Will skip if build/data is newer than src/data
 ```
 
 ## Creating Custom Tasks
@@ -481,21 +486,26 @@ You can create custom tasks by extending the `Task` base class:
 ```typescript
 import { Task } from "worklift";
 
+interface MyCustomTaskConfig {
+  option: string;
+  inputFiles?: string;
+}
+
 export class MyCustomTask extends Task {
-  private myOption?: string;
+  private myOption: string;
 
-  inputs?: string | string[];
-  outputs?: string | string[];
-
-  static create(option: string): MyCustomTask {
-    const task = new MyCustomTask();
-    task.myOption = option;
-    task.inputs = "src/**/*.txt";
-    task.outputs = "build/output.txt";
-    return task;
+  constructor(config: MyCustomTaskConfig) {
+    super();
+    this.myOption = config.option;
+    this.inputs = config.inputFiles ?? "src/**/*.txt";
+    this.outputs = "build/output.txt";
   }
 
-  validate() {
+  static of(config: MyCustomTaskConfig): MyCustomTask {
+    return new MyCustomTask(config);
+  }
+
+  override validate() {
     if (!this.myOption) {
       throw new Error("MyCustomTask: 'option' is required");
     }
@@ -509,7 +519,7 @@ export class MyCustomTask extends Task {
 
 // Usage:
 const target = app.target("custom").tasks([
-  MyCustomTask.create("some-value"),
+  MyCustomTask.of({ option: "some-value" }),
 ]);
 ```
 

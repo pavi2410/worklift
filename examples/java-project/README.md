@@ -12,20 +12,18 @@ This example demonstrates how to build a multi-project Java application with Wor
 
 ```
 examples/java-project/
+├── build.ts                            # Root build script (imports modules)
+├── README.md                           # This file
 ├── lib/                                # JAR library subproject
+│   ├── build.ts                        # Library build configuration
 │   └── src/
-│       └── com/
-│           └── example/
-│               └── lib/
-│                   └── StringUtils.java    # Utility class with string functions
-├── app/                                # Java application subproject
-│   └── src/
-│       └── com/
-│           └── example/
-│               └── app/
-│                   └── Main.java           # Main application
-├── build.ts                            # Worklift build script
-└── README.md                           # This file
+│       └── com/example/lib/
+│           └── StringUtils.java        # Utility class with string functions
+└── app/                                # Java application subproject
+    ├── build.ts                        # Application build configuration
+    └── src/
+        └── com/example/app/
+            └── Main.java               # Main application
 ```
 
 ## Components
@@ -120,8 +118,10 @@ The application project declares a dependency on the library project. This ensur
 ### 2. Java Compilation
 
 ```typescript
-JavacTask.sources("lib/src/com/example/lib/StringUtils.java")
-  .destination("lib/build/classes")
+JavacTask.of({
+  sources: "lib/src/com/example/lib/StringUtils.java",
+  destination: "lib/build/classes",
+})
 ```
 
 Compiles Java source files to a destination directory.
@@ -129,9 +129,11 @@ Compiles Java source files to a destination directory.
 ### 3. Classpath Management
 
 ```typescript
-JavacTask.sources("app/src/com/example/app/Main.java")
-  .destination("app/build/classes")
-  .classpath(["lib/build/string-utils.jar"])
+JavacTask.of({
+  sources: "app/src/com/example/app/Main.java",
+  destination: "app/build/classes",
+  classpath: ["lib/build/string-utils.jar"],
+})
 ```
 
 The application compilation includes the library JAR on its classpath, allowing it to use library classes.
@@ -139,9 +141,11 @@ The application compilation includes the library JAR on its classpath, allowing 
 ### 4. JAR Packaging
 
 ```typescript
-JarTask.from("app/build/classes")
-  .to("app/build/demo-app.jar")
-  .mainClass("com.example.app.Main")
+JarTask.of({
+  from: "app/build/classes",
+  to: "app/build/demo-app.jar",
+  mainClass: "com.example.app.Main",
+})
 ```
 
 Packages compiled classes into a JAR file with a Main-Class manifest entry.
@@ -149,11 +153,10 @@ Packages compiled classes into a JAR file with a Main-Class manifest entry.
 ### 5. Running Java Applications
 
 ```typescript
-JavaTask.mainClass("com.example.app.Main")
-  .classpath([
-    "app/build/classes",
-    "lib/build/string-utils.jar"
-  ])
+JavaTask.of({
+  mainClass: "com.example.app.Main",
+  classpath: ["app/build/classes", "lib/build/string-utils.jar"],
+})
 ```
 
 Runs the application with both the application classes and library JAR on the classpath.
