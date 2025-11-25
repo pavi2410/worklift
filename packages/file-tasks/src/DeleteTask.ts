@@ -1,7 +1,6 @@
-import { Task } from "@worklift/core";
+import { Task, FileSet } from "@worklift/core";
 import { rm } from "fs/promises";
 import { glob } from "glob";
-import { FileSet } from "./FileSet.ts";
 
 /**
  * Configuration for DeleteTask

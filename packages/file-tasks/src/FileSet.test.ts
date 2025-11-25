@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { FileSet } from "./FileSet.ts";
+import { FileSet } from "@worklift/core";
 import { CopyTask } from "./CopyTask.ts";
 import { mkdir, writeFile, rm } from "fs/promises";
 import { join } from "path";

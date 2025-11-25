@@ -1,8 +1,7 @@
-import { Task, Logger } from "@worklift/core";
+import { Task, Logger, FileSet } from "@worklift/core";
 import { cp, mkdir, copyFile } from "fs/promises";
 import { basename, relative, join, dirname } from "path";
 import { glob } from "glob";
-import { FileSet } from "./FileSet.ts";
 
 /**
  * Configuration for CopyTask

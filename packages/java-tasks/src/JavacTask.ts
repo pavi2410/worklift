@@ -1,11 +1,11 @@
-import { Task, Artifact, ExternalCommandError } from "@worklift/core";
+import { Task, Artifact, ExternalCommandError, FileSet } from "@worklift/core";
 import { spawn } from "child_process";
 import { delimiter } from "path";
 
 /**
- * Type for classpath elements - can be strings, string arrays, or artifacts
+ * Type for classpath elements - can be strings, string arrays, artifacts, or FileSets
  */
-type ClasspathElement = string | string[] | Artifact<string[]>;
+export type ClasspathElement = string | string[] | Artifact<string[]> | FileSet;
 
 /**
  * Configuration for JavacTask
@@ -15,7 +15,7 @@ export interface JavacTaskConfig {
   sources: string | string[];
   /** Output directory for compiled classes */
   destination: string;
-  /** Classpath entries (strings, arrays, or artifacts) */
+  /** Classpath entries (strings, arrays, artifacts, or FileSets) */
   classpath?: ClasspathElement[];
   /** Java source version (e.g., "11", "17") */
   sourceVersion?: string;
@@ -73,7 +73,7 @@ export class JavacTask extends Task {
   /**
    * Resolve all classpath elements to a flat array of paths
    */
-  private resolveClasspath(): string[] {
+  private async resolveClasspath(): Promise<string[]> {
     const resolved: string[] = [];
 
     for (const element of this.classpathElements) {
@@ -83,6 +83,9 @@ export class JavacTask extends Task {
         resolved.push(...element);
       } else if (element instanceof Artifact) {
         const paths = this.readArtifact(element);
+        resolved.push(...paths);
+      } else if (element instanceof FileSet) {
+        const paths = await element.resolve();
         resolved.push(...paths);
       }
     }
@@ -106,8 +109,8 @@ export class JavacTask extends Task {
 
     const args = ["-d", this.destDir!];
 
-    // Resolve classpath from all sources (strings, arrays, artifacts)
-    const classpath = this.resolveClasspath();
+    // Resolve classpath from all sources (strings, arrays, artifacts, FileSets)
+    const classpath = await this.resolveClasspath();
     if (classpath.length > 0) {
       args.push("-cp", classpath.join(delimiter));
     }

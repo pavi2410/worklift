@@ -1,7 +1,6 @@
-import { Task } from "@worklift/core";
+import { Task, FileSet } from "@worklift/core";
 import { spawn } from "child_process";
 import { relative, isAbsolute, resolve as resolvePath } from "path";
-import { FileSet } from "./FileSet.ts";
 
 /**
  * Configuration for ZipTask

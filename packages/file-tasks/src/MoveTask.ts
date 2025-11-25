@@ -1,7 +1,6 @@
-import { Task } from "@worklift/core";
+import { Task, FileSet } from "@worklift/core";
 import { rename, mkdir } from "fs/promises";
 import { relative, join, dirname, basename } from "path";
-import { FileSet } from "./FileSet.ts";
 
 /**
  * Configuration for MoveTask

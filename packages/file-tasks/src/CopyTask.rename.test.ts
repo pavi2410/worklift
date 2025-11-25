@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
 import { CopyTask } from "./CopyTask";
-import { FileSet } from "./FileSet";
+import { FileSet } from "@worklift/core";
 import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from "fs";
 
 describe("CopyTask rename", () => {
