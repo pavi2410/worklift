@@ -1,0 +1,63 @@
+/**
+ * Application Module (app)
+ *
+ * Main application module:
+ * - src/ - Application source code
+ *
+ * Dependencies:
+ * - lib library module
+ */
+
+import { project } from "worklift";
+import { JavacTask, JarTask, JavaTask } from "worklift";
+import { DeleteTask } from "worklift";
+import * as lib from "../lib/build.ts";
+
+// ============================================================================
+// Application Module
+// ============================================================================
+
+const app = project("app").dependsOn(lib.lib);
+
+// Clean target - removes all build artifacts
+export const clean = app.target("clean").tasks([
+  DeleteTask.of({ paths: ["build"], recursive: true }),
+]);
+
+// Compile target - compiles Java sources with library on classpath
+export const compile = app
+  .target("compile")
+  .dependsOn(clean, lib.jar) // Depends on lib being packaged
+  .tasks([
+    JavacTask.of({
+      sources: "src/com/example/app/Main.java",
+      destination: "build/classes",
+      classpath: ["../lib/build/string-utils.jar"], // Use the library JAR
+    }),
+  ]);
+
+// JAR target - packages application into executable JAR
+export const jar = app
+  .target("jar")
+  .dependsOn(compile)
+  .tasks([
+    JarTask.of({
+      from: "build/classes",
+      to: "build/demo-app.jar",
+      mainClass: "com.example.app.Main",
+    }),
+  ]);
+
+// Run target - runs the application with library on classpath
+export const run = app
+  .target("run")
+  .dependsOn(compile)
+  .tasks([
+    JavaTask.of({
+      mainClass: "com.example.app.Main",
+      classpath: [
+        "build/classes",
+        "../lib/build/string-utils.jar", // Library must be on classpath
+      ],
+    }),
+  ]);
