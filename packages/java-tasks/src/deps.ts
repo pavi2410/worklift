@@ -27,12 +27,18 @@ export const JUNIT4_DEPS = [
 
 /**
  * JUnit 5 (Jupiter) dependencies
+ * Includes all transitive dependencies needed for compilation and runtime
  */
 export const JUNIT5_DEPS = [
   "org.junit.jupiter:junit-jupiter-api:5.10.2",
   "org.junit.jupiter:junit-jupiter-engine:5.10.2",
   "org.junit.platform:junit-platform-launcher:1.10.2",
   "org.junit.platform:junit-platform-console:1.10.2",
+  "org.junit.platform:junit-platform-commons:1.10.2",
+  "org.junit.platform:junit-platform-engine:1.10.2",
+  "org.junit.platform:junit-platform-reporting:1.10.2",
+  "org.opentest4j:opentest4j:1.3.0",
+  "org.apiguardian:apiguardian-api:1.1.2",
 ];
 
 /**

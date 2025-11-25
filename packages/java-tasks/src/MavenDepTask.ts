@@ -127,6 +127,11 @@ export class MavenDepTask extends Task {
   async execute(): Promise<void> {
     const resolvedPaths: string[] = [];
 
+    console.log(`Resolving ${this.coordinates.length} Maven dependencies:`);
+    for (const coord of this.coordinates) {
+      console.log(`  - ${coord}`);
+    }
+
     for (const coord of this.coordinates) {
       const coordinates = this.parseCoordinates(coord);
       const jarPath = await this.downloadDependency(coordinates);

@@ -189,6 +189,9 @@ export class JUnitTask extends Task {
     // JUnit 5 Console Launcher
     args.push("org.junit.platform.console.ConsoleLauncher");
 
+    // Use 'execute' subcommand (recommended)
+    args.push("execute");
+
     // Add scan classpath
     args.push("--scan-classpath", this.testClassesDir);
 
