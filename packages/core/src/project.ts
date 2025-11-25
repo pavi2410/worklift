@@ -8,11 +8,13 @@ import { Logger } from "./logging/index.ts";
  */
 export class ProjectImpl implements Project {
   name: string;
+  baseDir?: string;
   dependencies: Project[] = [];
   targets = new Map<string, Target>();
 
-  constructor(name: string) {
+  constructor(name: string, baseDir?: string) {
     this.name = name;
+    this.baseDir = baseDir;
     // Register this project in the global registry
     projects.set(name, this);
   }
@@ -204,8 +206,29 @@ export class ProjectImpl implements Project {
 
 /**
  * Create a new project
+ * @param name Project name
+ * @param baseDir Base directory for the project. If not specified, will be inferred from the caller's file location
  */
-export function project(name: string): Project {
-  const proj = new ProjectImpl(name);
+export function project(name: string, baseDir?: string): Project {
+  // If baseDir not provided, try to infer from caller's location
+  if (!baseDir) {
+    const err = new Error();
+    const stack = err.stack?.split('\n');
+    if (stack && stack.length > 2) {
+      // Parse the stack trace to find the calling file
+      const callerLine = stack[2];
+      const match = callerLine.match(/\((.+?):\d+:\d+\)/) || callerLine.match(/at (.+?):\d+:\d+/);
+      if (match) {
+        const filePath = match[1];
+        // Get the directory of the calling file
+        const lastSlash = Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\'));
+        if (lastSlash !== -1) {
+          baseDir = filePath.substring(0, lastSlash);
+        }
+      }
+    }
+  }
+
+  const proj = new ProjectImpl(name, baseDir);
   return proj;
 }

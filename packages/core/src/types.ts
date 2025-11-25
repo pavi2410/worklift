@@ -43,6 +43,8 @@ export interface Target {
 export interface Project {
   /** Project name */
   name: string;
+  /** Base directory for this project (for resolving relative paths) */
+  baseDir?: string;
   /** Dependencies on other projects */
   dependencies: Project[];
   /** Targets in this project */

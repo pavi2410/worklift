@@ -69,11 +69,21 @@ export class TargetImpl implements Target {
     // Show target start
     logger.info(`[${targetFullName}]`);
 
+    // Save current working directory
+    const originalCwd = process.cwd();
+    let cwdChanged = false;
+
     try {
       if (this.taskList.length === 0) {
         logger.warn("  (no tasks)");
         logger.popContext();
         return;
+      }
+
+      // Change to project base directory if specified
+      if (this.project?.baseDir) {
+        process.chdir(this.project.baseDir);
+        cwdChanged = true;
       }
 
       const scheduler = new TaskScheduler();
@@ -82,6 +92,10 @@ export class TargetImpl implements Target {
       logger.error("", error instanceof Error ? error : undefined);
       throw error;
     } finally {
+      // Restore original working directory
+      if (cwdChanged) {
+        process.chdir(originalCwd);
+      }
       logger.popContext();
     }
   }
