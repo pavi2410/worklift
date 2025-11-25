@@ -1,6 +1,7 @@
 import { Task, ExternalCommandError } from "@worklift/core";
 import { spawn } from "child_process";
-import { writeFile } from "fs/promises";
+import { writeFile, mkdir } from "fs/promises";
+import { dirname } from "path";
 
 /**
  * Task for creating JAR files
@@ -47,6 +48,10 @@ export class JarTask extends Task {
   }
 
   async execute() {
+    // Ensure the output directory exists
+    const jarDir = dirname(this.jarFile!);
+    await mkdir(jarDir, { recursive: true });
+
     const args: string[] = [];
 
     // If we have a manifest file or need to create one for Main-Class

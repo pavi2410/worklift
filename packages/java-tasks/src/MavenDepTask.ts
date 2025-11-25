@@ -98,7 +98,25 @@ export class MavenDepTask extends Task {
   static resolve(...coords: string[]): MavenDepTask {
     const task = new MavenDepTask();
     task.coordinates = coords;
+    // Pre-compute output paths for incremental build checking
+    task.outputs = coords.map(coord => task.getLocalJarPath(task.parseCoordinates(coord)));
     return task;
+  }
+
+  /**
+   * Get the local repository path for a JAR file
+   */
+  private getLocalJarPath(coords: MavenCoordinates): string {
+    const { groupId, artifactId, version } = coords;
+    const groupPath = groupId.replace(/\./g, "/");
+    const jarFileName = `${artifactId}-${version}.jar`;
+    return join(
+      this.localRepo,
+      groupPath,
+      artifactId,
+      version,
+      jarFileName
+    );
   }
 
   /**
@@ -143,7 +161,37 @@ export class MavenDepTask extends Task {
     return this;
   }
 
+  async execute(): Promise<void> {
+    const resolvedPaths: string[] = [];
+
+    for (const coord of this.coordinates) {
+      const coordinates = this.parseCoordinates(coord);
+      const jarPath = await this.downloadDependency(coordinates);
+      resolvedPaths.push(jarPath);
+    }
+
+    // Populate the artifact with resolved paths
+    this.populateArtifact(resolvedPaths);
+  }
+
+  /**
+   * Populate the output artifact with JAR paths.
+   * This should be called both after downloading and when skipped.
+   */
+  private populateArtifact(paths: string[]): void {
+    if (this.outputArtifact) {
+      // Use setValue directly since we're in the same task
+      this.outputArtifact.setValue(paths);
+    }
+  }
+
+  /**
+   * Override validate to also populate artifact if outputs already exist.
+   * This ensures the artifact is available even when task is skipped.
+   */
   validate(): void {
+    super.validate();
+
     if (!this.coordinates || this.coordinates.length === 0) {
       throw new Error("MavenDepTask: at least one dependency coordinate is required");
     }
@@ -158,25 +206,12 @@ export class MavenDepTask extends Task {
         );
       }
     }
-  }
 
-  async execute(): Promise<void> {
-
-    const resolvedPaths: string[] = [];
-
-    for (const coord of this.coordinates) {
-      const coordinates = this.parseCoordinates(coord);
-      const jarPath = await this.downloadDependency(coordinates);
-      resolvedPaths.push(jarPath);
+    // If outputs are set (pre-computed), populate artifact now
+    // This ensures artifact is available even if task is skipped
+    if (this.outputs && Array.isArray(this.outputs)) {
+      this.populateArtifact(this.outputs);
     }
-
-    // Write to artifact if specified
-    if (this.outputArtifact) {
-      await this.writeArtifact(this.outputArtifact, resolvedPaths);
-    }
-
-    // Also set as outputs for file-based dependency tracking
-    this.outputs = resolvedPaths;
   }
 
   /**
@@ -197,15 +232,9 @@ export class MavenDepTask extends Task {
 
     // Build local repository path
     // Example: ~/.m2/repository/org/json/json/20230227/json-20230227.jar
+    const localPath = this.getLocalJarPath(coords);
     const groupPath = groupId.replace(/\./g, "/");
     const jarFileName = `${artifactId}-${version}.jar`;
-    const localPath = join(
-      this.localRepo,
-      groupPath,
-      artifactId,
-      version,
-      jarFileName
-    );
 
     // Check if already downloaded
     try {

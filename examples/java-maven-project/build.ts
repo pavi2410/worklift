@@ -56,7 +56,13 @@ export const stringUtilsResolveDeps = stringUtils
   .produces(junitClasspath)
   .tasks([
     MavenDepTask.resolve(
-      "org.junit.jupiter:junit-jupiter:5.9.3"
+      "org.junit.jupiter:junit-jupiter-api:5.9.3",
+      "org.junit.jupiter:junit-jupiter-engine:5.9.3",
+      "org.junit.platform:junit-platform-console:1.9.3",
+      "org.junit.platform:junit-platform-engine:1.9.3",
+      "org.junit.platform:junit-platform-commons:1.9.3",
+      "org.junit.platform:junit-platform-launcher:1.9.3",
+      "org.opentest4j:opentest4j:1.2.0"
     ).into(junitClasspath),
   ]);
 
