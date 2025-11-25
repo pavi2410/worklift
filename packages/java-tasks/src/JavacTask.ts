@@ -61,6 +61,13 @@ export class JavacTask extends Task {
     // Set inputs/outputs for incremental builds
     this.inputs = this.srcFiles;
     this.outputs = this.destDir;
+
+    // Register artifact inputs (creates dependency edges)
+    for (const element of this.classpathElements) {
+      if (element instanceof Artifact) {
+        this.consumes(element);
+      }
+    }
   }
 
   /**

@@ -8,7 +8,7 @@
  * 4. Build a complete build pipeline with type-safe dependency passing
  */
 
-import { project, artifact } from "@worklift/core";
+import { project, Artifact } from "@worklift/core";
 import {
   JavacTask,
   JavaTask,
@@ -16,14 +16,13 @@ import {
   MavenRepos,
 } from "@worklift/java-tasks";
 import { MkdirTask } from "@worklift/file-tasks";
-import { z } from "zod";
 
 // Create a simple Java application project
 const app = project("maven-app");
 
 // Define typed artifacts for compile and test classpaths
-const compileClasspath = artifact("compile-classpath", z.array(z.string()));
-const testClasspath = artifact("test-classpath", z.array(z.string()));
+const compileClasspath = Artifact.of<string[]>();
+const testClasspath = Artifact.of<string[]>();
 
 // Create build directories
 const prepare = app.target({
@@ -35,10 +34,9 @@ const prepare = app.target({
 });
 
 // Resolve compile-time dependencies
-// Produces an artifact containing paths to downloaded JARs
+// MavenDepTask automatically registers compileClasspath as an output artifact
 const resolveDepsForCompile = app.target({
   name: "resolve-deps-for-compile",
-  produces: [compileClasspath],
   tasks: [
     MavenDepTask.of({
       coordinates: ["org.json:json:20230227", "com.google.guava:guava:31.1-jre"],
@@ -48,10 +46,9 @@ const resolveDepsForCompile = app.target({
 });
 
 // Resolve test-time dependencies (includes compile deps + test-only deps)
+// Note: dependsOn is no longer needed - the scheduler infers it from artifact dependencies
 const resolveDepsForTest = app.target({
   name: "resolve-deps-for-test",
-  dependsOn: [resolveDepsForCompile],
-  produces: [testClasspath],
   tasks: [
     MavenDepTask.of({
       coordinates: ["commons-lang:commons-lang:2.6", "junit:junit:4.13.2"],
@@ -61,9 +58,11 @@ const resolveDepsForTest = app.target({
 });
 
 // Compile source code using resolved dependencies
+// JavacTask automatically registers compileClasspath as an input artifact
+// The scheduler will ensure resolveDepsForCompile runs first
 const compileSrc = app.target({
   name: "compile-src",
-  dependsOn: [prepare, resolveDepsForCompile],
+  dependsOn: [prepare], // Only explicit dependency on prepare
   tasks: [
     JavacTask.of({
       sources: "src/**/*.java",
@@ -74,9 +73,10 @@ const compileSrc = app.target({
 });
 
 // Compile tests using both compile and test dependencies
+// Artifact dependencies are inferred: compileClasspath + testClasspath
 const compileTest = app.target({
   name: "compile-test",
-  dependsOn: [compileSrc, resolveDepsForTest],
+  dependsOn: [compileSrc], // File dependency on compiled classes
   tasks: [
     JavacTask.of({
       sources: "test/**/*.java",

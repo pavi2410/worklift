@@ -110,10 +110,10 @@ bun run build.ts app:run
 
 ```typescript
 const lib = project("lib");
-const app = project("app").dependsOn(lib);
+const app = project("app");
 ```
 
-The application project declares a dependency on the library project. This ensures the library is built before the application.
+Projects are created independently. Dependencies between them are expressed through target references.
 
 ### 2. Java Compilation
 
@@ -164,9 +164,11 @@ Runs the application with both the application classes and library JAR on the cl
 ### 6. Target Dependencies
 
 ```typescript
-const appCompile = app.target("compile")
-  .dependsOn(appClean, libJar)
-  .tasks([...])
+const appCompile = app.target({
+  name: "compile",
+  dependsOn: [libJar],  // Cross-project target reference
+  tasks: [...],
+});
 ```
 
 Target dependencies ensure proper build order:

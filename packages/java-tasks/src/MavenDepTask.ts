@@ -89,7 +89,11 @@ export class MavenDepTask extends Task {
     this.localRepo = join(homedir(), ".m2", "repository");
     this.coordinates = config.coordinates;
     this.repositories = config.repositories ?? DEFAULT_MAVEN_REPOS;
-    this.outputArtifact = config.into;
+    
+    // Register artifact as output (creates dependency edge)
+    if (config.into) {
+      this.outputArtifact = this.produces(config.into);
+    }
 
     // Pre-compute output paths for incremental build checking
     this.outputs = this.coordinates.map(coord =>
@@ -135,12 +139,10 @@ export class MavenDepTask extends Task {
 
   /**
    * Populate the output artifact with JAR paths.
-   * This should be called both after downloading and when skipped.
    */
   private populateArtifact(paths: string[]): void {
     if (this.outputArtifact) {
-      // Use setValue directly since we're in the same task
-      this.outputArtifact.setValue(paths);
+      this.writeArtifact(this.outputArtifact, paths);
     }
   }
 

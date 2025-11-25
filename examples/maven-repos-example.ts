@@ -8,21 +8,19 @@
  * 4. Handle dependencies from different repos
  */
 
-import { project, artifact } from "@worklift/core";
+import { project, Artifact } from "@worklift/core";
 import { MavenDepTask, MavenRepos } from "@worklift/java-tasks";
-import { z } from "zod";
 
 // Create a project
 const app = project("maven-repos-demo");
 
 // Define artifacts
-const compileClasspath = artifact("compile-classpath", z.array(z.string()));
-const androidClasspath = artifact("android-classpath", z.array(z.string()));
+const compileClasspath = Artifact.of<string[]>();
+const androidClasspath = Artifact.of<string[]>();
 
 // ===== Example 1: Default (Maven Central only) =====
 const resolveFromCentral = app.target({
   name: "resolve-from-central",
-  produces: [compileClasspath],
   tasks: [
     MavenDepTask.of({
       coordinates: ["org.json:json:20230227"],
@@ -40,7 +38,6 @@ const mavenRepos = [
 
 const resolveFromMultiple = app.target({
   name: "resolve-from-multiple",
-  produces: [androidClasspath],
   tasks: [
     MavenDepTask.of({
       coordinates: ["com.google.android:android:4.1.1.4"],
@@ -75,11 +72,10 @@ const dependencies = [
   "junit:junit:4.13.2",
 ];
 
-const allClasspath = artifact("all-classpath", z.array(z.string()));
+const allClasspath = Artifact.of<string[]>();
 
 const resolveAllDeps = app.target({
   name: "resolve-all-deps",
-  produces: [allClasspath],
   tasks: [
     MavenDepTask.of({
       coordinates: dependencies,
@@ -94,12 +90,11 @@ const springRepos = [MavenRepos.SPRING_RELEASE, MavenRepos.CENTRAL];
 
 const apacheRepos = [MavenRepos.APACHE_SNAPSHOTS, MavenRepos.CENTRAL];
 
-const springClasspath = artifact("spring-classpath", z.array(z.string()));
-const apacheClasspath = artifact("apache-classpath", z.array(z.string()));
+const springClasspath = Artifact.of<string[]>();
+const apacheClasspath = Artifact.of<string[]>();
 
 const resolveByType = app.target({
   name: "resolve-by-type",
-  produces: [springClasspath, apacheClasspath],
   tasks: [
     MavenDepTask.of({
       coordinates: ["org.springframework:spring-core:5.3.23"],
@@ -115,11 +110,10 @@ const resolveByType = app.target({
 });
 
 // ===== Example 6: Advanced - Dynamic dependency resolution =====
-const dynamicClasspath = artifact("dynamic-classpath", z.array(z.string()));
+const dynamicClasspath = Artifact.of<string[]>();
 
 const resolveDynamic = app.target({
   name: "resolve-dynamic",
-  produces: [dynamicClasspath],
   tasks: [
     MavenDepTask.of({
       coordinates: ["org.json:json:20230227", "com.google.guava:guava:31.1-jre"],

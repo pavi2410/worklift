@@ -6,7 +6,7 @@
  * - src/test/java - Library tests
  */
 
-import { project, artifact } from "@worklift/core";
+import { project, Artifact } from "@worklift/core";
 import {
   JavacTask,
   JarTask,
@@ -14,14 +14,13 @@ import {
   JUnitTask,
   JUNIT5_DEPS,
 } from "@worklift/java-tasks";
-import { z } from "zod";
 
 // ============================================================================
 // Artifacts
 // ============================================================================
 
 // JUnit 5 dependencies for testing
-export const junitClasspath = artifact("junit-classpath", z.array(z.string()));
+export const junitClasspath = Artifact.of<string[]>();
 
 // ============================================================================
 // String Utils Library
@@ -32,7 +31,6 @@ const stringUtils = project("string-utils");
 // Resolve JUnit 5 dependencies for testing
 export const resolveDeps = stringUtils.target({
   name: "resolve-deps",
-  produces: [junitClasspath],
   tasks: [
     MavenDepTask.of({
       coordinates: JUNIT5_DEPS,
@@ -58,9 +56,10 @@ export const compile = stringUtils.target({
 
 // Compile library tests
 // Maven convention: src/test/java -> build/test-classes
+// Note: resolveDeps dependency is inferred from junitClasspath artifact
 export const compileTests = stringUtils.target({
   name: "compile-tests",
-  dependsOn: [compile, resolveDeps],
+  dependsOn: [compile],
   tasks: [
     JavacTask.of({
       sources: "src/test/java/com/example/utils/StringUtilsTest.java",

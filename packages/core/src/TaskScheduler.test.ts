@@ -1,6 +1,7 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
 import { TaskScheduler } from "./TaskScheduler.ts";
 import { Task } from "./Task.ts";
+import { Artifact } from "./Artifact.ts";
 import { writeFile, mkdir, rm, stat } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
@@ -306,6 +307,195 @@ describe("TaskScheduler", () => {
       expect(executionOrder[0]).toBe(1);
       // task2 and task3 can be in any order, but after task1
       expect(executionOrder.slice(1).sort()).toEqual([2, 3]);
+    });
+  });
+
+  describe("artifact dependencies", () => {
+    // Producer task that writes to an artifact
+    class ProducerTask extends Task {
+      executed = false;
+      private orderTracker: number[];
+      id: number;
+      private outputArtifact: Artifact<string[]>;
+
+      constructor(orderTracker: number[], id: number, artifact: Artifact<string[]>) {
+        super();
+        this.orderTracker = orderTracker;
+        this.id = id;
+        this.outputArtifact = this.produces(artifact);
+      }
+
+      async execute(): Promise<void> {
+        this.executed = true;
+        this.orderTracker.push(this.id);
+        this.writeArtifact(this.outputArtifact, ["path1", "path2"]);
+      }
+    }
+
+    // Consumer task that reads from an artifact
+    class ConsumerTask extends Task {
+      executed = false;
+      private orderTracker: number[];
+      id: number;
+      private inputArtifact: Artifact<string[]>;
+      receivedValue?: string[];
+
+      constructor(orderTracker: number[], id: number, artifact: Artifact<string[]>) {
+        super();
+        this.orderTracker = orderTracker;
+        this.id = id;
+        this.inputArtifact = this.consumes(artifact);
+      }
+
+      async execute(): Promise<void> {
+        this.executed = true;
+        this.orderTracker.push(this.id);
+        this.receivedValue = this.readArtifact(this.inputArtifact);
+      }
+    }
+
+    test("executes producer before consumer", async () => {
+      const scheduler = new TaskScheduler();
+      const executionOrder: number[] = [];
+      const artifact = Artifact.of<string[]>();
+
+      const producer = new ProducerTask(executionOrder, 1, artifact);
+      const consumer = new ConsumerTask(executionOrder, 2, artifact);
+
+      // Deliberately pass consumer first
+      await scheduler.executeTasks([consumer, producer]);
+
+      // Producer should execute before consumer
+      expect(executionOrder).toEqual([1, 2]);
+      expect(consumer.receivedValue).toEqual(["path1", "path2"]);
+    });
+
+    test("handles chain of artifact dependencies", async () => {
+      const scheduler = new TaskScheduler();
+      const executionOrder: number[] = [];
+
+      const artifact1 = Artifact.of<string[]>();
+      const artifact2 = Artifact.of<string[]>();
+
+      // Task that both consumes and produces
+      class TransformTask extends Task {
+        executed = false;
+        private orderTracker: number[];
+        id: number;
+        private inputArtifact: Artifact<string[]>;
+        private outputArtifact: Artifact<string[]>;
+
+        constructor(
+          orderTracker: number[],
+          id: number,
+          input: Artifact<string[]>,
+          output: Artifact<string[]>
+        ) {
+          super();
+          this.orderTracker = orderTracker;
+          this.id = id;
+          this.inputArtifact = this.consumes(input);
+          this.outputArtifact = this.produces(output);
+        }
+
+        async execute(): Promise<void> {
+          this.executed = true;
+          this.orderTracker.push(this.id);
+          const input = this.readArtifact(this.inputArtifact);
+          this.writeArtifact(this.outputArtifact, [...input, "transformed"]);
+        }
+      }
+
+      const producer = new ProducerTask(executionOrder, 1, artifact1);
+      const transformer = new TransformTask(executionOrder, 2, artifact1, artifact2);
+      const consumer = new ConsumerTask(executionOrder, 3, artifact2);
+
+      // Pass in random order
+      await scheduler.executeTasks([consumer, producer, transformer]);
+
+      expect(executionOrder).toEqual([1, 2, 3]);
+      expect(consumer.receivedValue).toEqual(["path1", "path2", "transformed"]);
+    });
+
+    test("allows artifact with default value and no producer", async () => {
+      const scheduler = new TaskScheduler();
+      const executionOrder: number[] = [];
+
+      // Artifact with default empty array
+      const artifact = Artifact.of<string[]>(() => []);
+      const consumer = new ConsumerTask(executionOrder, 1, artifact);
+
+      await scheduler.executeTasks([consumer]);
+
+      expect(consumer.executed).toBe(true);
+      expect(consumer.receivedValue).toEqual([]);
+    });
+
+    test("throws when artifact has no producer and no default", async () => {
+      const scheduler = new TaskScheduler();
+      const executionOrder: number[] = [];
+
+      const artifact = Artifact.of<string[]>(); // No default
+      const consumer = new ConsumerTask(executionOrder, 1, artifact);
+
+      await expect(scheduler.executeTasks([consumer])).rejects.toThrow(
+        "no producer"
+      );
+    });
+
+    test("throws when artifact has multiple producers", async () => {
+      const scheduler = new TaskScheduler();
+      const executionOrder: number[] = [];
+
+      const artifact = Artifact.of<string[]>();
+      const producer1 = new ProducerTask(executionOrder, 1, artifact);
+
+      // This should throw immediately when trying to register second producer
+      expect(() => new ProducerTask(executionOrder, 2, artifact)).toThrow(
+        "already has a producer"
+      );
+    });
+
+    test("combines file and artifact dependencies", async () => {
+      const scheduler = new TaskScheduler();
+      const executionOrder: number[] = [];
+
+      const artifact = Artifact.of<string[]>();
+
+      // Task 1: produces file
+      const task1 = new TestTask(executionOrder, 1, undefined, "output.txt");
+
+      // Task 2: consumes file, produces artifact
+      class FileToArtifactTask extends Task {
+        executed = false;
+        private orderTracker: number[];
+        id: number;
+        private outputArtifact: Artifact<string[]>;
+
+        constructor(orderTracker: number[], id: number, artifact: Artifact<string[]>) {
+          super();
+          this.orderTracker = orderTracker;
+          this.id = id;
+          this.inputs = "output.txt";
+          this.outputArtifact = this.produces(artifact);
+        }
+
+        async execute(): Promise<void> {
+          this.executed = true;
+          this.orderTracker.push(this.id);
+          this.writeArtifact(this.outputArtifact, ["from-file"]);
+        }
+      }
+
+      const task2 = new FileToArtifactTask(executionOrder, 2, artifact);
+
+      // Task 3: consumes artifact
+      const task3 = new ConsumerTask(executionOrder, 3, artifact);
+
+      await scheduler.executeTasks([task3, task1, task2]);
+
+      // Should execute in order: 1 (file producer), 2 (file consumer + artifact producer), 3 (artifact consumer)
+      expect(executionOrder).toEqual([1, 2, 3]);
     });
   });
 });

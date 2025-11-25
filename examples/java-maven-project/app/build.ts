@@ -10,7 +10,7 @@
  * - org.json external Maven dependency
  */
 
-import { project, artifact } from "@worklift/core";
+import { project, Artifact } from "@worklift/core";
 import {
   JavacTask,
   JavaTask,
@@ -18,7 +18,6 @@ import {
   MavenDepTask,
   JUnitTask,
 } from "@worklift/java-tasks";
-import { z } from "zod";
 import * as stringUtils from "../string-utils/build.ts";
 
 // ============================================================================
@@ -26,7 +25,7 @@ import * as stringUtils from "../string-utils/build.ts";
 // ============================================================================
 
 // External dependencies for the application (org.json)
-export const appDependencies = artifact("app-dependencies", z.array(z.string()));
+export const appDependencies = Artifact.of<string[]>();
 
 // ============================================================================
 // Application Module
@@ -37,7 +36,6 @@ const app = project("app");
 // Resolve app dependencies (org.json)
 export const resolveDeps = app.target({
   name: "resolve-deps",
-  produces: [appDependencies],
   tasks: [
     MavenDepTask.of({
       coordinates: ["org.json:json:20230227"],
@@ -48,9 +46,10 @@ export const resolveDeps = app.target({
 
 // Compile app sources
 // Depends on: string-utils library JAR + external dependencies
+// Note: resolveDeps dependency is inferred from appDependencies artifact
 export const compile = app.target({
   name: "compile",
-  dependsOn: [resolveDeps, stringUtils.jar],
+  dependsOn: [stringUtils.jar],
   tasks: [
     JavacTask.of({
       sources: "src/main/java/com/example/app/Application.java",

@@ -1,64 +1,133 @@
-import { z } from "zod";
+import type { Task } from "./Task.ts";
 
 /**
- * Represents a typed artifact that can be produced by one target
- * and consumed by other targets.
+ * Represents a typed artifact that can be produced by one task
+ * and consumed by other tasks.
  *
- * Artifacts provide type-safe data passing between targets, going beyond
+ * Artifacts provide type-safe data passing between tasks, going beyond
  * file-based dependencies to support in-memory values like classpaths,
  * configuration objects, etc.
  *
+ * Artifacts are dependency edges: the scheduler uses them to determine
+ * task execution order, just like file inputs/outputs.
+ *
  * @example
  * ```typescript
- * const compileClasspath = artifact("compile-classpath", z.array(z.string()));
+ * // Define a typed artifact (no Zod, just TypeScript types)
+ * const compileClasspath = Artifact.of<string[]>();
  *
- * const resolveDeps = project.target("resolve-deps")
- *   .produces(compileClasspath)
- *   .tasks([
- *     MavenDepTask.resolve("org.json:json:20230227").into(compileClasspath)
- *   ]);
+ * // Producer task writes to artifact
+ * MavenDepTask({ coordinates: [...], into: compileClasspath })
  *
- * const compile = project.target("compile")
- *   .dependsOn(resolveDeps)
- *   .tasks([
- *     JavacTask.classpath(compileClasspath)
- *   ]);
+ * // Consumer task reads from artifact
+ * JavacTask({ classpath: [compileClasspath, "lib/extra.jar"] })
  * ```
  */
-export class Artifact<T = any> {
+export class Artifact<T = unknown> {
   private value?: T;
+  private defaultFactory?: () => T;
+  private producer?: Task;
   private isSet = false;
 
-  constructor(
-    public readonly name: string,
-    public readonly schema: z.ZodType<T>
-  ) {}
+  private constructor(defaultValue?: T | (() => T)) {
+    if (typeof defaultValue === "function") {
+      this.defaultFactory = defaultValue as () => T;
+    } else if (defaultValue !== undefined) {
+      this.value = defaultValue;
+      this.isSet = true;
+    }
+  }
 
   /**
-   * Set the artifact value with validation.
-   * Throws if the value doesn't match the schema.
+   * Create a new typed artifact container.
+   *
+   * @param defaultValue - Optional default value or factory function.
+   *   If provided, the artifact can be consumed even without a producer.
+   * @returns A new Artifact instance
+   *
+   * @example
+   * ```typescript
+   * // Artifact that must have a producer
+   * const classpath = Artifact.of<string[]>();
+   *
+   * // Artifact with default empty array (no producer required)
+   * const optionalDeps = Artifact.of<string[]>(() => []);
+   *
+   * // Artifact with static default value
+   * const config = Artifact.of<Config>({ debug: false });
+   * ```
    */
-  setValue(value: unknown): void {
-    this.value = this.schema.parse(value);
+  static of<T>(defaultValue?: T | (() => T)): Artifact<T> {
+    return new Artifact(defaultValue);
+  }
+
+  /**
+   * Set the producer task for this artifact.
+   * Only one task can produce an artifact.
+   * @internal Used by Task.produces()
+   */
+  _setProducer(task: Task): void {
+    if (this.producer && this.producer !== task) {
+      throw new Error(
+        `Artifact already has a producer. Only one task can produce an artifact.`
+      );
+    }
+    this.producer = task;
+  }
+
+  /**
+   * Check if this artifact has a producer task.
+   * @internal Used by TaskScheduler
+   */
+  _hasProducer(): boolean {
+    return this.producer !== undefined;
+  }
+
+  /**
+   * Get the producer task for this artifact.
+   * @internal Used by TaskScheduler
+   */
+  _getProducer(): Task | undefined {
+    return this.producer;
+  }
+
+  /**
+   * Check if this artifact has a default value or factory.
+   * @internal Used by TaskScheduler
+   */
+  _hasDefault(): boolean {
+    return this.defaultFactory !== undefined || this.isSet;
+  }
+
+  /**
+   * Set the artifact value.
+   * @internal Used by tasks during execution
+   */
+  _setValue(value: T): void {
+    this.value = value;
     this.isSet = true;
   }
 
   /**
    * Get the artifact value.
-   * Throws if the value has not been set.
+   * Returns the set value, or computes from default factory, or throws.
+   * @internal Used by tasks during execution
    */
-  getValue(): T {
-    if (!this.isSet) {
-      throw new Error(
-        `Artifact '${this.name}' has not been set. ` +
-          `Make sure the target that produces this artifact has executed.`
-      );
+  _getValue(): T {
+    if (this.isSet) {
+      return this.value as T;
     }
-    return this.value!;
+    if (this.defaultFactory) {
+      return this.defaultFactory();
+    }
+    throw new Error(
+      `Artifact has no value. Make sure the producer task has executed, ` +
+        `or provide a default value when creating the artifact.`
+    );
   }
 
   /**
-   * Check if the artifact has a value set.
+   * Check if the artifact has a value set (not just a default).
    */
   hasValue(): boolean {
     return this.isSet;
@@ -70,28 +139,6 @@ export class Artifact<T = any> {
   reset(): void {
     this.value = undefined;
     this.isSet = false;
+    // Note: producer is NOT reset, as it's a structural relationship
   }
-}
-
-/**
- * Create a new typed artifact.
- *
- * @param name - Unique identifier for the artifact
- * @param schema - Zod schema for type validation
- * @returns A new Artifact instance
- *
- * @example
- * ```typescript
- * // Simple string array for classpaths
- * const classpath = artifact("classpath", z.array(z.string()));
- *
- * // Complex configuration object
- * const config = artifact("config", z.object({
- *   version: z.string(),
- *   dependencies: z.array(z.string())
- * }));
- * ```
- */
-export function artifact<T>(name: string, schema: z.ZodType<T>): Artifact<T> {
-  return new Artifact(name, schema);
 }

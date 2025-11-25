@@ -209,7 +209,6 @@ interface TargetConfig {
   name: string;
   dependsOn?: Dependency[];
   tasks?: Task[];
-  produces?: Artifact[];
 }
 ```
 
@@ -229,7 +228,6 @@ interface Target {
   project?: Project;
   dependencies: Dependency[];
   taskList: Task[];
-  producedArtifacts: Artifact[];
   execute(): Promise<void>;
 }
 ```

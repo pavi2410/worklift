@@ -1,6 +1,5 @@
 import type { Target, TargetConfig, Dependency, Project } from "./types.ts";
 import type { Task } from "./Task.ts";
-import type { Artifact } from "./Artifact.ts";
 import { TaskScheduler } from "./TaskScheduler.ts";
 import { Logger } from "./logging/index.ts";
 
@@ -12,7 +11,6 @@ export class TargetImpl implements Target {
   project?: Project;
   dependencies: Dependency[] = [];
   taskList: Task[] = [];
-  producedArtifacts: Artifact[] = [];
 
   constructor(config: TargetConfig, project?: Project) {
     this.name = config.name;
@@ -24,10 +22,6 @@ export class TargetImpl implements Target {
 
     if (config.tasks) {
       this.setTasks(config.tasks);
-    }
-
-    if (config.produces) {
-      this.producedArtifacts = [...config.produces];
     }
   }
 

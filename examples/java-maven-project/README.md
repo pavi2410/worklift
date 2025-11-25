@@ -124,70 +124,80 @@ await appBuild.execute();
 ### 1. Maven Dependency Resolution
 
 ```typescript
-const junitClasspath = artifact("junit-classpath", z.array(z.string()));
+import { Artifact } from "@worklift/core";
 
-const resolveDeps = project
-  .target("resolve-deps")
-  .produces(junitClasspath)
-  .tasks([
+// Define a typed artifact for the classpath
+const junitClasspath = Artifact.of<string[]>();
+
+// MavenDepTask produces the artifact - scheduler infers dependencies automatically
+const resolveDeps = project.target({
+  name: "resolve-deps",
+  tasks: [
     MavenDepTask.of({
       coordinates: ["org.junit.jupiter:junit-jupiter:5.9.3"],
       into: junitClasspath,
     }),
-  ]);
+  ],
+});
 ```
 
 ### 2. Library Module Dependencies
 
 ```typescript
 // App depends on string-utils JAR
-const appCompile = app
-  .target("compile")
-  .dependsOn(stringUtilsJar)  // Ensures library is built first
-  .tasks([
+const appCompile = app.target({
+  name: "compile",
+  dependsOn: [stringUtilsJar],  // Ensures library is built first
+  tasks: [
     JavacTask.of({
       sources: "app/src/main/java/**/*.java",
       destination: "app/build/classes",
       classpath: ["string-utils/build/libs/string-utils.jar"],
     }),
-  ]);
+  ],
+});
 ```
 
 ### 3. Testing with JUnit 5
 
 ```typescript
-const test = project
-  .target("test")
-  .tasks([
+// JavaTask consumes the junitClasspath artifact
+// The scheduler ensures resolveDeps runs first automatically!
+const test = project.target({
+  name: "test",
+  tasks: [
     JavaTask.of({
       mainClass: "org.junit.platform.console.ConsoleLauncher",
       classpath: [junitClasspath, "build/classes", "build/test-classes"],
       args: ["--scan-classpath", "build/test-classes", "--fail-if-no-tests"],
     }),
-  ]);
+  ],
+});
 ```
 
 ### 4. JAR Packaging
 
 ```typescript
-const jar = project
-  .target("jar")
-  .tasks([
+const jar = project.target({
+  name: "jar",
+  tasks: [
     JarTask.of({
       from: "build/classes",
       to: "build/libs/app.jar",
       mainClass: "com.example.app.Application",
     }),
-  ]);
+  ],
+});
 ```
 
 ### 5. Multi-Module Coordination
 
 ```typescript
 // Build everything in correct order
-const buildAll = app
-  .target("build-all")
-  .dependsOn(stringUtilsBuild, appBuild);
+const buildAll = app.target({
+  name: "build-all",
+  dependsOn: [stringUtilsBuild, appBuild],
+});
 ```
 
 ## Maven Conventions Used

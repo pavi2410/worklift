@@ -1,6 +1,6 @@
 import { Glob } from "bun";
 import { resolve } from "path";
-import type { Artifact } from "./Artifact.ts";
+import { Artifact } from "./Artifact.ts";
 
 /**
  * Base class for all tasks in Worklift
@@ -10,7 +10,7 @@ import type { Artifact } from "./Artifact.ts";
  * and automatic parallelization.
  *
  * Tasks can also produce and consume typed artifacts for passing data
- * between targets beyond file-based dependencies.
+ * between tasks. Artifacts create dependency edges just like file I/O.
  */
 export abstract class Task {
   /**
@@ -23,6 +23,18 @@ export abstract class Task {
    * Output files or directories that this task produces.
    */
   outputs?: string | string[];
+
+  /**
+   * Artifacts that this task consumes (reads from).
+   * Used by the scheduler to determine task ordering.
+   */
+  readonly inputArtifacts: Artifact<unknown>[] = [];
+
+  /**
+   * Artifacts that this task produces (writes to).
+   * Used by the scheduler to determine task ordering.
+   */
+  readonly outputArtifacts: Artifact<unknown>[] = [];
 
   /**
    * Validate that all required parameters are set.
@@ -97,28 +109,71 @@ export abstract class Task {
   }
 
   /**
-   * Write a value to an artifact with validation.
-   * Use this in task.execute() to produce artifact values.
+   * Register an artifact as an input (consumed by this task).
+   * Call this in the constructor when the task reads from an artifact.
+   *
+   * @param artifact - The artifact to consume
+   * @returns The same artifact (for chaining)
+   *
+   * @example
+   * ```typescript
+   * constructor(config: { classpath: Artifact<string[]> }) {
+   *   super();
+   *   this.classpathArtifact = this.consumes(config.classpath);
+   * }
+   * ```
+   */
+  protected consumes<T>(artifact: Artifact<T>): Artifact<T> {
+    if (!this.inputArtifacts.includes(artifact)) {
+      this.inputArtifacts.push(artifact);
+    }
+    return artifact;
+  }
+
+  /**
+   * Register an artifact as an output (produced by this task).
+   * Call this in the constructor when the task writes to an artifact.
+   * Only one task can produce a given artifact.
+   *
+   * @param artifact - The artifact to produce
+   * @returns The same artifact (for chaining)
+   *
+   * @example
+   * ```typescript
+   * constructor(config: { into: Artifact<string[]> }) {
+   *   super();
+   *   this.outputArtifact = this.produces(config.into);
+   * }
+   * ```
+   */
+  protected produces<T>(artifact: Artifact<T>): Artifact<T> {
+    artifact._setProducer(this);
+    if (!this.outputArtifacts.includes(artifact)) {
+      this.outputArtifacts.push(artifact);
+    }
+    return artifact;
+  }
+
+  /**
+   * Write a value to an artifact.
+   * Use this in task.execute() to set the artifact value.
    *
    * @example
    * ```typescript
    * async execute(): Promise<void> {
    *   const paths = await this.downloadDependencies();
-   *   await this.writeArtifact(this.outputArtifact, paths);
+   *   this.writeArtifact(this.outputArtifact, paths);
    * }
    * ```
    */
-  protected async writeArtifact<T>(
-    artifact: Artifact<T>,
-    value: T
-  ): Promise<void> {
-    artifact.setValue(value);
+  protected writeArtifact<T>(artifact: Artifact<T>, value: T): void {
+    artifact._setValue(value);
   }
 
   /**
    * Read a value from an artifact.
    * Use this in task.execute() to consume artifact values.
-   * Throws if the artifact hasn't been set by a dependency target.
+   * Throws if the artifact hasn't been set and has no default.
    *
    * @example
    * ```typescript
@@ -129,6 +184,6 @@ export abstract class Task {
    * ```
    */
   protected readArtifact<T>(artifact: Artifact<T>): T {
-    return artifact.getValue();
+    return artifact._getValue();
   }
 }

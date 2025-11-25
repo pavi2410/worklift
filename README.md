@@ -233,7 +233,47 @@ const frontendBuild = frontend.target({
 - **Target reference** - Depend on a specific target (recommended): `dependsOn: [libBuild]`
 - **String** - Depend on a target by name within the same project: `dependsOn: ["clean"]`
 
-See [DEPENDENCIES.md](DEPENDENCIES.md) for detailed documentation.
+See [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md) for detailed documentation.
+
+### Artifacts
+
+Artifacts provide type-safe data passing between tasks, enabling automatic dependency inference:
+
+```typescript
+import { project, Artifact } from "@worklift/core";
+import { MavenDepTask, JavacTask } from "@worklift/java-tasks";
+
+// Define a typed artifact
+const classpath = Artifact.of<string[]>();
+
+const app = project("my-app");
+
+// Producer task writes to the artifact
+app.target({
+  name: "resolve-deps",
+  tasks: [
+    MavenDepTask.of({
+      coordinates: ["org.json:json:20230227"],
+      into: classpath,
+    }),
+  ],
+});
+
+// Consumer task reads from the artifact
+// The scheduler automatically runs resolve-deps first!
+app.target({
+  name: "compile",
+  tasks: [
+    JavacTask.of({
+      sources: "src/**/*.java",
+      destination: "build/classes",
+      classpath: [classpath],
+    }),
+  ],
+});
+```
+
+See [docs/ARTIFACTS.md](docs/ARTIFACTS.md) for detailed documentation.
 
 ### Tasks
 
@@ -368,10 +408,12 @@ Java build tasks:
 
 - **MavenDepTask**: Resolve Maven dependencies
   ```typescript
+  const classpath = Artifact.of<string[]>();
+  
   MavenDepTask.of({
     coordinates: ["org.json:json:20230227", "com.google.guava:guava:31.1-jre"],
     repositories: [MavenRepos.CENTRAL, MavenRepos.GOOGLE],
-    into: classpathArtifact,
+    into: classpath,  // Writes resolved JAR paths to artifact
   })
   ```
 

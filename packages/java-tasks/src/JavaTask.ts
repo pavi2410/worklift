@@ -61,6 +61,13 @@ export class JavaTask extends Task {
     if (this.jarFile) {
       this.inputs = this.jarFile;
     }
+
+    // Register artifact inputs (creates dependency edges)
+    for (const element of this.classpathElements) {
+      if (element instanceof Artifact) {
+        this.consumes(element);
+      }
+    }
   }
 
   /**

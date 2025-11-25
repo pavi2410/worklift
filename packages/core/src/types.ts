@@ -3,7 +3,6 @@
  */
 
 import type { Task } from "./Task.ts";
-import type { Artifact } from "./Artifact.ts";
 
 /**
  * Configuration for creating a target
@@ -15,8 +14,6 @@ export interface TargetConfig {
   dependsOn?: Dependency[];
   /** Tasks to execute for this target */
   tasks?: Task[];
-  /** Artifacts produced by this target */
-  produces?: Artifact[];
 }
 
 /**
@@ -38,8 +35,6 @@ export interface Target {
   dependencies: Dependency[];
   /** Tasks to execute for this target */
   taskList: Task[];
-  /** Artifacts produced by this target */
-  producedArtifacts: Artifact[];
   /** Execute the target */
   execute(): Promise<void>;
 }

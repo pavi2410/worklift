@@ -1,4 +1,5 @@
 import { Task } from "./Task.ts";
+import { Artifact } from "./Artifact.ts";
 import { stat, access, constants } from "fs/promises";
 import { Logger } from "./logging/index.ts";
 
@@ -48,13 +49,12 @@ export class TaskScheduler {
       }))
     );
 
-    // Find dependencies between tasks
+    // Find dependencies between tasks based on file I/O
     // Task B depends on Task A if any of A's outputs overlap with B's inputs
     for (let i = 0; i < nodes.length; i++) {
-      const nodeA = nodes[i];
+      const nodeA = nodes[i]!;
       for (let j = i + 1; j < nodes.length; j++) {
-        const nodeB = nodes[j];
-        if (!nodeB) continue;
+        const nodeB = nodes[j]!;
 
         // Check if A's outputs overlap with B's inputs
         const aToB = this.hasPathOverlap(nodeA.outputs, nodeB.inputs);
@@ -80,10 +80,57 @@ export class TaskScheduler {
       }
     }
 
+    // Find dependencies between tasks based on artifacts
+    this.addArtifactDependencies(nodes);
+
     // Check for circular dependencies
     this.detectCircularDependencies(nodes);
 
     return nodes;
+  }
+
+  /**
+   * Add dependencies based on artifact producer/consumer relationships.
+   * If task B consumes an artifact that task A produces, B depends on A.
+   */
+  private addArtifactDependencies(nodes: TaskNode[]): void {
+    // Build a map from artifact to its producer node
+    const artifactProducers = new Map<Artifact<unknown>, TaskNode>();
+    
+    for (const node of nodes) {
+      for (const artifact of node.task.outputArtifacts) {
+        if (artifactProducers.has(artifact)) {
+          const existingProducer = artifactProducers.get(artifact)!;
+          throw new Error(
+            `Artifact has multiple producers: task at index ${existingProducer.index} ` +
+              `and task at index ${node.index}`
+          );
+        }
+        artifactProducers.set(artifact, node);
+      }
+    }
+
+    // For each consumer, find the producer and add dependency
+    for (const consumerNode of nodes) {
+      for (const artifact of consumerNode.task.inputArtifacts) {
+        const producerNode = artifactProducers.get(artifact);
+        
+        if (producerNode) {
+          // Consumer depends on producer
+          if (producerNode !== consumerNode) {
+            consumerNode.dependencies.add(producerNode);
+            producerNode.dependents.add(consumerNode);
+          }
+        } else if (!artifact._hasDefault()) {
+          // No producer and no default value - this is an error
+          throw new Error(
+            `Task at index ${consumerNode.index} consumes an artifact with no producer ` +
+              `and no default value. Either add a producer task or provide a default.`
+          );
+        }
+        // If artifact has default but no producer, that's fine - no dependency needed
+      }
+    }
   }
 
   /**

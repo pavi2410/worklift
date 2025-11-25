@@ -28,9 +28,6 @@
     "packages/core": {
       "name": "@worklift/core",
       "version": "0.1.0",
-      "dependencies": {
-        "zod": "^4.1.12",
-      },
       "devDependencies": {
         "@types/node": "^24.10.1",
       },
@@ -91,7 +88,5 @@
     "undici-types": ["undici-types@7.16.0", "", {}, "sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw=="],
 
     "worklift": ["worklift@workspace:packages/worklift"],
-
-    "zod": ["zod@4.1.13", "", {}, "sha512-AvvthqfqrAhNH9dnfmrfKzX5upOdjUVJYFqNSlkmGf64gRaTzlPwz99IHYnVs28qYAybvAlBV+H7pn0saFY4Ig=="],
   }
 }
