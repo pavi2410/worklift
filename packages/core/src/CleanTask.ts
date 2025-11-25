@@ -1,5 +1,7 @@
 import { Task } from "./Task.ts";
+import { Logger } from "./logging/index.ts";
 import { rm } from "fs/promises";
+import { resolve, relative } from "path";
 
 /**
  * Internal task for cleaning target outputs.
@@ -15,8 +17,19 @@ export class CleanTask extends Task {
   }
 
   async execute() {
+    const logger = Logger.get();
+    const cwd = process.cwd();
+
     for (const path of this.paths) {
-      await rm(path, { recursive: true, force: true });
+      const absolutePath = resolve(cwd, path);
+      const relativePath = relative(cwd, absolutePath);
+
+      // Warn if path is outside project directory
+      if (relativePath.startsWith("..")) {
+        logger.warn(`Deleting outside project: ${absolutePath}`);
+      }
+
+      await rm(absolutePath, { recursive: true, force: true });
     }
   }
 }

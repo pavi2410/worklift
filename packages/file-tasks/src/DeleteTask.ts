@@ -1,6 +1,7 @@
-import { Task, FileSet } from "@worklift/core";
+import { Task, FileSet, Logger } from "@worklift/core";
 import { Glob } from "bun";
 import { rm } from "fs/promises";
+import { resolve, relative } from "path";
 
 /**
  * Configuration for DeleteTask
@@ -76,10 +77,15 @@ export class DeleteTask extends Task {
   }
 
   async execute() {
+    const logger = Logger.get();
+    const cwd = process.cwd();
+
     // Delete explicit paths
     if (this.pathList && this.pathList.length > 0) {
       for (const path of this.pathList) {
-        await rm(path, { recursive: this.recursiveFlag, force: true });
+        const absolutePath = resolve(cwd, path);
+        this.warnIfOutsideProject(logger, cwd, absolutePath);
+        await rm(absolutePath, { recursive: this.recursiveFlag, force: true });
       }
     }
 
@@ -95,21 +101,23 @@ export class DeleteTask extends Task {
   }
 
   private async deleteMatchingPatterns() {
-    const cwd = this.baseDirPath || process.cwd();
+    const scanDir = this.baseDirPath || process.cwd();
+    const logger = Logger.get();
+    const projectRoot = process.cwd();
 
     for (const pattern of this.patternList!) {
       const matches: string[] = [];
       const globber = new Glob(pattern);
       for await (const file of globber.scan({
-        cwd,
+        cwd: scanDir,
         onlyFiles: !this.includeDirsFlag,
         absolute: true,
       })) {
         matches.push(file);
       }
 
-
       for (const file of matches) {
+        this.warnIfOutsideProject(logger, projectRoot, file);
         await rm(file, {
           recursive: this.recursiveFlag,
           force: true,
@@ -120,12 +128,22 @@ export class DeleteTask extends Task {
 
   private async deleteFromFileSet() {
     const files = await this.fileSet!.resolve();
+    const logger = Logger.get();
+    const cwd = process.cwd();
 
     for (const file of files) {
+      this.warnIfOutsideProject(logger, cwd, file);
       await rm(file, {
         recursive: this.recursiveFlag,
         force: true,
       });
+    }
+  }
+
+  private warnIfOutsideProject(logger: ReturnType<typeof Logger.get>, cwd: string, absolutePath: string) {
+    const relativePath = relative(cwd, absolutePath);
+    if (relativePath.startsWith("..")) {
+      logger.warn(`Deleting outside project: ${absolutePath}`);
     }
   }
 }
