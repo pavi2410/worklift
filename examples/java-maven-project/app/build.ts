@@ -18,7 +18,6 @@ import {
   MavenDepTask,
   JUnitTask,
 } from "@worklift/java-tasks";
-import { DeleteTask } from "@worklift/file-tasks";
 import { z } from "zod";
 import * as stringUtils from "../string-utils/build.ts";
 
@@ -34,12 +33,6 @@ export const appDependencies = artifact("app-dependencies", z.array(z.string()))
 // ============================================================================
 
 const app = project("app");
-
-// Clean build directory
-export const clean = app.target({
-  name: "clean",
-  tasks: [DeleteTask.of({ paths: ["build"], recursive: true })],
-});
 
 // Resolve app dependencies (org.json)
 export const resolveDeps = app.target({
@@ -57,7 +50,7 @@ export const resolveDeps = app.target({
 // Depends on: string-utils library JAR + external dependencies
 export const compile = app.target({
   name: "compile",
-  dependsOn: [clean, resolveDeps, stringUtils.jar],
+  dependsOn: [resolveDeps, stringUtils.jar],
   tasks: [
     JavacTask.of({
       sources: "src/main/java/com/example/app/Application.java",
@@ -146,3 +139,7 @@ export const run = app.target({
     }),
   ],
 });
+
+// Clean build outputs (derived from target outputs)
+// Note: resolveDeps is excluded to preserve downloaded dependencies
+export const clean = app.clean({ targets: [compile, compileTests, test, jar] });

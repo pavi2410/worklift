@@ -45,6 +45,14 @@ export interface Target {
 }
 
 /**
+ * Configuration for the clean method
+ */
+export interface CleanConfig {
+  /** Targets whose outputs should be cleaned */
+  targets: Target[];
+}
+
+/**
  * A project contains multiple targets
  */
 export interface Project {
@@ -56,6 +64,8 @@ export interface Project {
   targets: Map<string, Target>;
   /** Create a new target */
   target(config: TargetConfig): Target;
+  /** Create a clean target that deletes outputs of specified targets */
+  clean(config: CleanConfig): Target;
   /** Execute a target by name */
   execute(targetName: string): Promise<void>;
 }

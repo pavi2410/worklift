@@ -1,6 +1,7 @@
-import type { Project, Target, TargetConfig, Dependency } from "./types.ts";
+import type { Project, Target, TargetConfig, Dependency, CleanConfig } from "./types.ts";
 import { projects } from "./types.ts";
 import { TargetImpl } from "./target.ts";
+import { CleanTask } from "./CleanTask.ts";
 import { Logger } from "./logging/index.ts";
 
 /**
@@ -32,6 +33,26 @@ export class ProjectImpl implements Project {
     const target = new TargetImpl(config, this);
     this.targets.set(config.name, target);
     return target;
+  }
+
+  /**
+   * Create a clean target that deletes outputs of specified targets
+   */
+  clean(config: CleanConfig): Target {
+    // Collect all outputs from the specified targets' tasks
+    const outputs = new Set<string>();
+    
+    for (const target of config.targets) {
+      for (const task of target.taskList) {
+        const taskOutputs = task.normalizeOutputs();
+        taskOutputs.forEach((o) => outputs.add(o));
+      }
+    }
+
+    return this.target({
+      name: "clean",
+      tasks: [new CleanTask([...outputs])],
+    });
   }
 
   /**

@@ -14,7 +14,6 @@ import {
   JUnitTask,
   JUNIT5_DEPS,
 } from "@worklift/java-tasks";
-import { DeleteTask } from "@worklift/file-tasks";
 import { z } from "zod";
 
 // ============================================================================
@@ -29,12 +28,6 @@ export const junitClasspath = artifact("junit-classpath", z.array(z.string()));
 // ============================================================================
 
 const stringUtils = project("string-utils");
-
-// Clean build directory
-export const clean = stringUtils.target({
-  name: "clean",
-  tasks: [DeleteTask.of({ paths: ["build"], recursive: true })],
-});
 
 // Resolve JUnit 5 dependencies for testing
 export const resolveDeps = stringUtils.target({
@@ -52,7 +45,7 @@ export const resolveDeps = stringUtils.target({
 // Maven convention: src/main/java -> build/classes
 export const compile = stringUtils.target({
   name: "compile",
-  dependsOn: [clean],
+  dependsOn: [],
   tasks: [
     JavacTask.of({
       sources: "src/main/java/com/example/utils/StringUtils.java",
@@ -111,3 +104,7 @@ export const build = stringUtils.target({
   name: "build",
   dependsOn: [jar, test],
 });
+
+// Clean build outputs (derived from target outputs)
+// Note: resolveDeps is excluded to preserve downloaded dependencies
+export const clean = stringUtils.clean({ targets: [compile, compileTests, test, jar] });

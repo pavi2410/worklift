@@ -64,9 +64,10 @@ export abstract class Task {
   }
 
   /**
-   * Normalize outputs to an array
+   * Normalize outputs to an array.
+   * Public to allow Project.clean() to collect outputs from tasks.
    */
-  protected normalizeOutputs(): string[] {
+  normalizeOutputs(): string[] {
     if (!this.outputs) return [];
     return Array.isArray(this.outputs) ? this.outputs : [this.outputs];
   }
