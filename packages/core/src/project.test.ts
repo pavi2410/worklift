@@ -38,42 +38,16 @@ describe("Project", () => {
       expect(projects.get("test-project")).toBe(proj);
     });
 
-    test("creates project with empty dependencies", () => {
-      const proj = project("test-project");
-      expect(proj.dependencies).toEqual([]);
-    });
-
     test("creates project with empty targets map", () => {
       const proj = project("test-project");
       expect(proj.targets.size).toBe(0);
     });
   });
 
-  describe("dependsOn", () => {
-    test("adds project dependencies", () => {
-      const proj1 = project("proj1");
-      const proj2 = project("proj2");
-      const proj3 = project("proj3");
-
-      proj1.dependsOn(proj2, proj3);
-
-      expect(proj1.dependencies).toContain(proj2);
-      expect(proj1.dependencies).toContain(proj3);
-    });
-
-    test("returns this for chaining", () => {
-      const proj1 = project("proj1");
-      const proj2 = project("proj2");
-
-      const result = proj1.dependsOn(proj2);
-      expect(result).toBe(proj1);
-    });
-  });
-
   describe("target creation", () => {
     test("creates a new target", () => {
       const proj = project("test-project");
-      const target = proj.target("build");
+      const target = proj.target({ name: "build" });
 
       expect(target.name).toBe("build");
       expect(proj.targets.has("build")).toBe(true);
@@ -81,16 +55,16 @@ describe("Project", () => {
 
     test("throws error for duplicate target names", () => {
       const proj = project("test-project");
-      proj.target("build");
+      proj.target({ name: "build" });
 
-      expect(() => proj.target("build")).toThrow(
+      expect(() => proj.target({ name: "build" })).toThrow(
         'Target "build" already exists in project "test-project"'
       );
     });
 
     test("target has reference to parent project", () => {
       const proj = project("test-project");
-      const target = proj.target("build");
+      const target = proj.target({ name: "build" });
 
       expect(target.project).toBe(proj);
     });
@@ -110,7 +84,7 @@ describe("Project", () => {
       const executionOrder: number[] = [];
       const task = new TestTask(executionOrder, 1);
 
-      proj.target("build").tasks([task]);
+      proj.target({ name: "build", tasks: [task] });
 
       await proj.execute("build");
 
@@ -124,8 +98,8 @@ describe("Project", () => {
       const task1 = new TestTask(executionOrder, 1);
       const task2 = new TestTask(executionOrder, 2);
 
-      const target1 = proj.target("compile").tasks([task1]);
-      proj.target("build").dependsOn(target1).tasks([task2]);
+      const target1 = proj.target({ name: "compile", tasks: [task1] });
+      proj.target({ name: "build", dependsOn: [target1], tasks: [task2] });
 
       await proj.execute("build");
 
@@ -135,18 +109,22 @@ describe("Project", () => {
     test("detects cyclic target dependencies", async () => {
       const proj = project("test-project");
 
-      const target1 = proj.target("target1");
-      const target2 = proj.target("target2");
+      // Create targets first without dependencies
+      const target1 = proj.target({ name: "target1" });
+      const target2 = proj.target({ name: "target2", dependsOn: [target1] });
+      // Note: With object-based API, we can't create true cycles at construction time
+      // since target2 doesn't exist when target1 is created.
+      // This test now verifies that string-based dependencies work for cycle detection.
+      const proj2 = project("test-project-2");
+      proj2.target({ name: "target1", dependsOn: ["target2"] });
+      proj2.target({ name: "target2", dependsOn: ["target1"] });
 
-      target1.dependsOn(target2);
-      target2.dependsOn(target1);
-
-      await expect(proj.execute("target1")).rejects.toThrow(
+      await expect(proj2.execute("target1")).rejects.toThrow(
         "Cyclic target dependency"
       );
     });
 
-    test("executes project dependencies before target", async () => {
+    test("executes cross-project target dependencies", async () => {
       const executionOrder: number[] = [];
 
       const proj1 = project("proj1");
@@ -155,26 +133,12 @@ describe("Project", () => {
       const task1 = new TestTask(executionOrder, 1);
       const task2 = new TestTask(executionOrder, 2);
 
-      const proj1Build = proj1.target("build").tasks([task1]);
-      proj2.dependsOn(proj1).target("build").dependsOn(proj1Build).tasks([task2]);
+      const proj1Build = proj1.target({ name: "build", tasks: [task1] });
+      proj2.target({ name: "build", dependsOn: [proj1Build], tasks: [task2] });
 
       await proj2.execute("build");
 
       expect(executionOrder).toEqual([1, 2]);
-    });
-
-    test("detects cyclic project dependencies", async () => {
-      const proj1 = project("proj1");
-      const proj2 = project("proj2");
-
-      proj1.dependsOn(proj2);
-      proj2.dependsOn(proj1);
-
-      proj1.target("build").tasks([]);
-
-      await expect(proj1.execute("build")).rejects.toThrow(
-        "Cyclic project dependency"
-      );
     });
 
     test("does not execute same target twice", async () => {
@@ -185,9 +149,9 @@ describe("Project", () => {
       const task2 = new TestTask(executionOrder, 2);
       const task3 = new TestTask(executionOrder, 3);
 
-      const shared = proj.target("shared").tasks([sharedTask]);
-      const target1 = proj.target("target1").dependsOn(shared).tasks([task2]);
-      proj.target("target2").dependsOn(shared, target1).tasks([task3]);
+      const shared = proj.target({ name: "shared", tasks: [sharedTask] });
+      const target1 = proj.target({ name: "target1", dependsOn: [shared], tasks: [task2] });
+      proj.target({ name: "target2", dependsOn: [shared, target1], tasks: [task3] });
 
       await proj.execute("target2");
 
@@ -207,8 +171,8 @@ describe("Project", () => {
       const libTask = new TestTask(executionOrder, 1);
       const appTask = new TestTask(executionOrder, 2);
 
-      const libBuild = libProject.target("build").tasks([libTask]);
-      appProject.target("build").dependsOn(libBuild).tasks([appTask]);
+      const libBuild = libProject.target({ name: "build", tasks: [libTask] });
+      appProject.target({ name: "build", dependsOn: [libBuild], tasks: [appTask] });
 
       await appProject.execute("build");
 
@@ -226,9 +190,9 @@ describe("Project", () => {
       const task2 = new TestTask(executionOrder, 2);
       const task3 = new TestTask(executionOrder, 3);
 
-      const target1 = proj1.target("build").tasks([task1]);
-      const target2 = proj2.target("build").dependsOn(target1).tasks([task2]);
-      proj3.target("build").dependsOn(target2).tasks([task3]);
+      const target1 = proj1.target({ name: "build", tasks: [task1] });
+      const target2 = proj2.target({ name: "build", dependsOn: [target1], tasks: [task2] });
+      proj3.target({ name: "build", dependsOn: [target2], tasks: [task3] });
 
       await proj3.execute("build");
 

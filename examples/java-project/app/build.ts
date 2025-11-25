@@ -20,39 +20,44 @@ import * as lib from "../lib/build.ts";
 const app = project("app").dependsOn(lib.lib);
 
 // Clean target - removes all build artifacts
-export const clean = app.target("clean").tasks([
-  DeleteTask.of({ paths: ["build"], recursive: true }),
-]);
+export const clean = app.target({
+  name: "clean",
+  tasks: [
+    DeleteTask.of({ paths: ["build"], recursive: true }),
+  ],
+});
 
 // Compile target - compiles Java sources with library on classpath
-export const compile = app
-  .target("compile")
-  .dependsOn(clean, lib.jar) // Depends on lib being packaged
-  .tasks([
+export const compile = app.target({
+  name: "compile",
+  dependsOn: [clean, lib.jar], // Depends on lib being packaged
+  tasks: [
     JavacTask.of({
       sources: "src/com/example/app/Main.java",
       destination: "build/classes",
       classpath: ["../lib/build/string-utils.jar"], // Use the library JAR
     }),
-  ]);
+  ],
+});
 
 // JAR target - packages application into executable JAR
-export const jar = app
-  .target("jar")
-  .dependsOn(compile)
-  .tasks([
+export const jar = app.target({
+  name: "jar",
+  dependsOn: [compile],
+  tasks: [
     JarTask.of({
       from: "build/classes",
       to: "build/demo-app.jar",
       mainClass: "com.example.app.Main",
     }),
-  ]);
+  ],
+});
 
 // Run target - runs the application with library on classpath
-export const run = app
-  .target("run")
-  .dependsOn(compile)
-  .tasks([
+export const run = app.target({
+  name: "run",
+  dependsOn: [compile],
+  tasks: [
     JavaTask.of({
       mainClass: "com.example.app.Main",
       classpath: [
@@ -60,4 +65,5 @@ export const run = app
         "../lib/build/string-utils.jar", // Library must be on classpath
       ],
     }),
-  ]);
+  ],
+});

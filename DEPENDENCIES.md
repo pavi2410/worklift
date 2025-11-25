@@ -7,121 +7,75 @@ Worklift supports comprehensive dependency management between projects and targe
 ```typescript
 import { project } from "worklift";
 
-// Create projects with dependencies
-const lib = project("lib", (p) => {
-  p.target("build", () => { /* ... */ });
+// Create projects
+const lib = project("lib");
+const app = project("app");
+
+// Define targets with object-based configuration
+const libBuild = lib.target({
+  name: "build",
+  tasks: [/* ... */],
 });
 
-const app = project({
-  name: "app",
-  dependsOn: [lib, lib.target("test")]
-}, (p) => {
-  p.target("build", [lib.target("build")], () => { /* ... */ });
+const appBuild = app.target({
+  name: "build",
+  dependsOn: [libBuild],  // Depend on lib:build target
+  tasks: [/* ... */],
 });
 
 // Execute using target reference
-await app.target("build").execute();
+await appBuild.execute();
 ```
 
 ## Features
 
-### 1. Getting Target References
+### 1. Target References
 
-Get a reference to a target to use in dependencies or execute directly:
+Create targets and use them as dependencies:
 
 ```typescript
-const lib = project("lib", (p) => {
-  p.target("build", () => {
-    // Build library
-  });
-});
+const lib = project("lib");
 
-// Get target reference
-const buildTarget = lib.target("build");
+// Create a target and get its reference
+const libBuild = lib.target({
+  name: "build",
+  tasks: [/* Build library */],
+});
 
 // Execute directly
-await buildTarget.execute();
+await libBuild.execute();
 
 // Use in dependencies
-const app = project("app", (p) => {
-  p.target("build", [buildTarget], () => {
-    // Build app
-  });
+const app = project("app");
+const appBuild = app.target({
+  name: "build",
+  dependsOn: [libBuild],  // Depend on lib:build
+  tasks: [/* Build app */],
 });
 ```
 
-### 2. Project Options
-
-Define project dependencies upfront using options object:
-
-```typescript
-const app = project({
-  name: "app",
-  dependsOn: [lib1, lib2, lib3.target("test")]
-}, (p) => {
-  p.target("build", () => {
-    // All dependencies will be resolved before any target executes
-  });
-});
-```
-
-**Old API (still supported):**
-```typescript
-const app = project("app", (p) => {
-  p.dependsOn(lib1, lib2);
-  // ...
-});
-```
-
-### 3. Target Dependencies (within same project)
+### 2. Target Dependencies (within same project)
 
 Define dependencies between targets in the same project:
 
 ```typescript
-const app = project("app", (p) => {
-  p.target("clean", () => {
-    deleteFile({ paths: "dist", recursive: true });
-  });
+const app = project("app");
 
-  p.target("build", ["clean"], () => {
-    exec({ command: "tsc" });
-  });
-
-  p.target("test", ["build"], () => {
-    exec({ command: "jest" });
-  });
-});
-```
-
-### 2. Project Dependencies
-
-Make a project depend on another project using `dependsOn()`:
-
-```typescript
-const lib = project("lib", (p) => {
-  p.target("build", () => {
-    // Build library
-  });
+const clean = app.target({
+  name: "clean",
+  tasks: [DeleteTask.of({ paths: ["dist"], recursive: true })],
 });
 
-const app = project("app", (p) => {
-  // app depends on lib project
-  p.dependsOn(lib);
-
-  p.target("build", () => {
-    // Build app (lib will be built first)
-  });
+const build = app.target({
+  name: "build",
+  dependsOn: [clean],
+  tasks: [ExecTask.of({ command: "tsc" })],
 });
 
-// When executing app:build, lib's dependencies will be resolved first
-await app.execute("build");
-```
-
-You can depend on multiple projects:
-
-```typescript
-const app = project("app", (p) => {
-  p.dependsOn(lib1, lib2, lib3);
+const test = app.target({
+  name: "test",
+  dependsOn: [build],
+  tasks: [ExecTask.of({ command: "jest" })],
 });
 ```
 
@@ -130,64 +84,60 @@ const app = project("app", (p) => {
 Make a target depend on a specific target from another project:
 
 ```typescript
-const lib = project("lib", (p) => {
-  p.target("build", () => {
-    // Build library
-  });
+const lib = project("lib");
 
-  p.target("test", ["build"], () => {
-    // Test library
-  });
+const libBuild = lib.target({
+  name: "build",
+  tasks: [/* Build library */],
 });
 
-const app = project("app", (p) => {
-  // Depend on lib:test (specific target)
-  p.target("build", [[lib, "test"]], () => {
-    // Build app (lib:test will run first)
-  });
+const libTest = lib.target({
+  name: "test",
+  dependsOn: [libBuild],
+  tasks: [/* Test library */],
+});
+
+const app = project("app");
+const appBuild = app.target({
+  name: "build",
+  dependsOn: [libTest],  // Depend on lib:test (specific target)
+  tasks: [/* Build app (lib:test will run first) */],
 });
 ```
 
 ### 4. Mixed Dependencies
 
-Combine all dependency types in a single target:
+Combine different dependency types in a single target:
 
 ```typescript
-const app = project("app", (p) => {
-  p.target("build", [
-    "clean",              // Local target
-    lib,                  // Project dependency
-    [utils, "build"],     // Cross-project target
-  ], () => {
-    // Build app
-  });
+const app = project("app");
+
+const clean = app.target({ name: "clean", tasks: [/* ... */] });
+
+const build = app.target({
+  name: "build",
+  dependsOn: [
+    clean,        // Local target reference
+    libBuild,     // Cross-project target reference
+    "prepare",    // Local target by name (string)
+  ],
+  tasks: [/* Build app */],
 });
 ```
 
 ## Dependency Types
 
-The `Dependency` type supports four formats:
+The `Dependency` type supports two formats:
 
 1. **`string`** - Target name within the same project
    ```typescript
-   p.target("build", ["clean"], () => { ... });
+   app.target({ name: "build", dependsOn: ["clean"], tasks: [...] });
    ```
 
-2. **`Target`** - Direct target reference (NEW!)
+2. **`Target`** - Direct target reference (recommended)
    ```typescript
-   const buildTarget = lib.target("build");
-   p.target("deploy", [buildTarget], () => { ... });
-   ```
-
-3. **`Project`** - Entire project dependency
-   ```typescript
-   p.target("build", [libProject], () => { ... });
-   ```
-
-4. **`[Project, string]`** - Specific target from another project (legacy)
-   ```typescript
-   p.target("build", [[libProject, "test"]], () => { ... });
-   // Prefer using: p.target("build", [libProject.target("test")], () => { ... });
+   const libBuild = lib.target({ name: "build", tasks: [...] });
+   app.target({ name: "deploy", dependsOn: [libBuild], tasks: [...] });
    ```
 
 ## Features
@@ -203,13 +153,12 @@ The `Dependency` type supports four formats:
 The system detects and prevents circular dependencies:
 
 ```typescript
-const a = project("a", (p) => {
-  p.target("build", [[b, "build"]], () => {});
-});
+const a = project("a");
+const b = project("b");
 
-const b = project("b", (p) => {
-  p.target("build", [[a, "build"]], () => {});
-});
+// Using string dependencies allows cycle detection at runtime
+a.target({ name: "build", dependsOn: ["b-build"], tasks: [] });
+b.target({ name: "build", dependsOn: ["a-build"], tasks: [] });
 
 // This will throw: "Cyclic target dependency detected"
 await a.execute("build");
@@ -242,18 +191,25 @@ See `examples/dependencies-example.ts` for a comprehensive example showing:
 ```typescript
 interface Project {
   name: string;
-  dependencies: Project[];
+  baseDir?: string;
   targets: Map<string, Target>;
 
-  // Define a target
-  target(name: string, fn: () => void): void;
-  target(name: string, dependencies: Dependency[], fn: () => void): void;
+  // Create a target with object-based configuration
+  target(config: TargetConfig): Target;
 
-  // Execute a target
+  // Execute a target by name
   execute(targetName: string): Promise<void>;
+}
+```
 
-  // Add project dependencies
-  dependsOn(...projects: Project[]): void;
+### TargetConfig Interface
+
+```typescript
+interface TargetConfig {
+  name: string;
+  dependsOn?: Dependency[];
+  tasks?: Task[];
+  produces?: Artifact[];
 }
 ```
 
@@ -261,9 +217,8 @@ interface Project {
 
 ```typescript
 type Dependency =
-  | string              // Local target name
-  | Project             // Project dependency
-  | [Project, string];  // Cross-project target
+  | string    // Local target name
+  | Target;   // Target reference (recommended)
 ```
 
 ### Target Interface
@@ -271,48 +226,51 @@ type Dependency =
 ```typescript
 interface Target {
   name: string;
+  project?: Project;
   dependencies: Dependency[];
-  tasks: TaskFn[];
+  taskList: Task[];
+  producedArtifacts: Artifact[];
   execute(): Promise<void>;
 }
 ```
 
 ## Migration Guide
 
-### From v1.x
+### From Fluent API to Object-Based API
 
-If you were using string-based target dependencies:
-
-```typescript
-// v1.x - still works!
-p.target("build", ["clean"], () => { ... });
-```
-
-Now you can also use:
+If you were using the fluent API:
 
 ```typescript
-// v2.x - new features!
-p.target("build", ["clean", [otherProject, "build"]], () => { ... });
+// Old fluent API
+const build = app.target("build")
+  .dependsOn(compile)
+  .tasks([...]);
 ```
 
-The API is fully backward compatible.
+Migrate to object-based configuration:
+
+```typescript
+// New object-based API
+const build = app.target({
+  name: "build",
+  dependsOn: [compile],
+  tasks: [...],
+});
+```
 
 ## Best Practices
 
-1. **Use project dependencies for shared libraries**: If your app always needs a lib built first, use `dependsOn(lib)`
+1. **Use target references for dependencies**: Prefer `dependsOn: [libBuild]` over string names for type safety
 
-2. **Use cross-project target dependencies for specific cases**: If you only need a specific target from another project, use `[project, "target"]`
+2. **Keep dependency graphs simple**: Avoid deep nesting and complex circular dependencies
 
-3. **Keep dependency graphs simple**: Avoid deep nesting and complex circular dependencies
+3. **Document your dependencies**: Add comments explaining why dependencies exist
 
-4. **Document your dependencies**: Add comments explaining why dependencies exist
-
-5. **Test your build order**: Run your build from a clean state to verify all dependencies are correctly specified
+4. **Test your build order**: Run your build from a clean state to verify all dependencies are correctly specified
 
 ## Implementation Details
 
 - Projects are registered in a global `Map<string, Project>`
 - Execution tracking uses `Set<string>` with keys like `"projectName:targetName"`
 - Cyclic detection uses an `inProgress` set to track currently executing targets
-- Each project maintains its own dependency list
 - Dependencies are resolved depth-first, pre-order

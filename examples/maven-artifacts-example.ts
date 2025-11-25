@@ -26,90 +26,103 @@ const compileClasspath = artifact("compile-classpath", z.array(z.string()));
 const testClasspath = artifact("test-classpath", z.array(z.string()));
 
 // Clean build directory
-const clean = app.target("clean").tasks([DeleteTask.of({ paths: ["build"] })]);
+const clean = app.target({
+  name: "clean",
+  tasks: [DeleteTask.of({ paths: ["build"] })],
+});
 
 // Create build directories
-const prepare = app
-  .target("prepare")
-  .dependsOn(clean)
-  .tasks([
+const prepare = app.target({
+  name: "prepare",
+  dependsOn: [clean],
+  tasks: [
     MkdirTask.of({ paths: ["build/classes"] }),
     MkdirTask.of({ paths: ["build/test-classes"] }),
-  ]);
+  ],
+});
 
 // Resolve compile-time dependencies
 // Produces an artifact containing paths to downloaded JARs
-const resolveDepsForCompile = app
-  .target("resolve-deps-for-compile")
-  .produces(compileClasspath)
-  .tasks([
+const resolveDepsForCompile = app.target({
+  name: "resolve-deps-for-compile",
+  produces: [compileClasspath],
+  tasks: [
     MavenDepTask.of({
       coordinates: ["org.json:json:20230227", "com.google.guava:guava:31.1-jre"],
       into: compileClasspath,
     }),
-  ]);
+  ],
+});
 
 // Resolve test-time dependencies (includes compile deps + test-only deps)
-const resolveDepsForTest = app
-  .target("resolve-deps-for-test")
-  .dependsOn(resolveDepsForCompile)
-  .produces(testClasspath)
-  .tasks([
+const resolveDepsForTest = app.target({
+  name: "resolve-deps-for-test",
+  dependsOn: [resolveDepsForCompile],
+  produces: [testClasspath],
+  tasks: [
     MavenDepTask.of({
       coordinates: ["commons-lang:commons-lang:2.6", "junit:junit:4.13.2"],
       into: testClasspath,
     }),
-  ]);
+  ],
+});
 
 // Compile source code using resolved dependencies
-const compileSrc = app
-  .target("compile-src")
-  .dependsOn(prepare, resolveDepsForCompile)
-  .tasks([
+const compileSrc = app.target({
+  name: "compile-src",
+  dependsOn: [prepare, resolveDepsForCompile],
+  tasks: [
     JavacTask.of({
       sources: "src/**/*.java",
       destination: "build/classes",
       classpath: [compileClasspath],
     }),
-  ]);
+  ],
+});
 
 // Compile tests using both compile and test dependencies
-const compileTest = app
-  .target("compile-test")
-  .dependsOn(compileSrc, resolveDepsForTest)
-  .tasks([
+const compileTest = app.target({
+  name: "compile-test",
+  dependsOn: [compileSrc, resolveDepsForTest],
+  tasks: [
     JavacTask.of({
       sources: "test/**/*.java",
       destination: "build/test-classes",
       classpath: [compileClasspath, testClasspath, "build/classes"],
     }),
-  ]);
+  ],
+});
 
 // Run tests with full classpath
-const test = app
-  .target("test")
-  .dependsOn(compileSrc, compileTest)
-  .tasks([
+const test = app.target({
+  name: "test",
+  dependsOn: [compileSrc, compileTest],
+  tasks: [
     JavaTask.of({
       mainClass: "com.example.TestRunner",
       classpath: [compileClasspath, testClasspath, "build/classes", "build/test-classes"],
       args: ["--verbose"],
     }),
-  ]);
+  ],
+});
 
 // Run the application
-const run = app
-  .target("run")
-  .dependsOn(compileSrc)
-  .tasks([
+const run = app.target({
+  name: "run",
+  dependsOn: [compileSrc],
+  tasks: [
     JavaTask.of({
       mainClass: "com.example.Main",
       classpath: [compileClasspath, "build/classes"],
     }),
-  ]);
+  ],
+});
 
 // Build everything
-const build = app.target("build").dependsOn(compileSrc, compileTest);
+const build = app.target({
+  name: "build",
+  dependsOn: [compileSrc, compileTest],
+});
 
 /**
  * To run this example:

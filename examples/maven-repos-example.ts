@@ -20,15 +20,16 @@ const compileClasspath = artifact("compile-classpath", z.array(z.string()));
 const androidClasspath = artifact("android-classpath", z.array(z.string()));
 
 // ===== Example 1: Default (Maven Central only) =====
-const resolveFromCentral = app
-  .target("resolve-from-central")
-  .produces(compileClasspath)
-  .tasks([
+const resolveFromCentral = app.target({
+  name: "resolve-from-central",
+  produces: [compileClasspath],
+  tasks: [
     MavenDepTask.of({
       coordinates: ["org.json:json:20230227"],
       into: compileClasspath,
     }),
-  ]);
+  ],
+});
 
 // ===== Example 2: Multiple well-known repositories =====
 const mavenRepos = [
@@ -37,16 +38,17 @@ const mavenRepos = [
   MavenRepos.JBOSS, // Then JBoss
 ];
 
-const resolveFromMultiple = app
-  .target("resolve-from-multiple")
-  .produces(androidClasspath)
-  .tasks([
+const resolveFromMultiple = app.target({
+  name: "resolve-from-multiple",
+  produces: [androidClasspath],
+  tasks: [
     MavenDepTask.of({
       coordinates: ["com.google.android:android:4.1.1.4"],
       repositories: mavenRepos,
       into: androidClasspath,
     }),
-  ]);
+  ],
+});
 
 // ===== Example 3: Custom repository URLs =====
 const customRepos = [
@@ -54,14 +56,15 @@ const customRepos = [
   "https://repo1.maven.org/maven2", // Fallback to Maven Central
 ];
 
-const resolveFromCustom = app
-  .target("resolve-from-custom")
-  .tasks([
+const resolveFromCustom = app.target({
+  name: "resolve-from-custom",
+  tasks: [
     MavenDepTask.of({
       coordinates: ["com.example:proprietary-lib:1.0.0"],
       repositories: customRepos,
     }),
-  ]);
+  ],
+});
 
 // ===== Example 4: Programmatic dependency list - "Just use JavaScript!" =====
 // RECOMMENDED: Use spread operator to pass multiple dependencies to a single task
@@ -74,16 +77,17 @@ const dependencies = [
 
 const allClasspath = artifact("all-classpath", z.array(z.string()));
 
-const resolveAllDeps = app
-  .target("resolve-all-deps")
-  .produces(allClasspath)
-  .tasks([
+const resolveAllDeps = app.target({
+  name: "resolve-all-deps",
+  produces: [allClasspath],
+  tasks: [
     MavenDepTask.of({
       coordinates: dependencies,
       repositories: mavenRepos,
       into: allClasspath,
     }),
-  ]);
+  ],
+});
 
 // ===== Example 5: Different repos for different dependency types =====
 const springRepos = [MavenRepos.SPRING_RELEASE, MavenRepos.CENTRAL];
@@ -93,10 +97,10 @@ const apacheRepos = [MavenRepos.APACHE_SNAPSHOTS, MavenRepos.CENTRAL];
 const springClasspath = artifact("spring-classpath", z.array(z.string()));
 const apacheClasspath = artifact("apache-classpath", z.array(z.string()));
 
-const resolveByType = app
-  .target("resolve-by-type")
-  .produces(springClasspath, apacheClasspath)
-  .tasks([
+const resolveByType = app.target({
+  name: "resolve-by-type",
+  produces: [springClasspath, apacheClasspath],
+  tasks: [
     MavenDepTask.of({
       coordinates: ["org.springframework:spring-core:5.3.23"],
       repositories: springRepos,
@@ -107,21 +111,23 @@ const resolveByType = app
       repositories: apacheRepos,
       into: apacheClasspath,
     }),
-  ]);
+  ],
+});
 
 // ===== Example 6: Advanced - Dynamic dependency resolution =====
 const dynamicClasspath = artifact("dynamic-classpath", z.array(z.string()));
 
-const resolveDynamic = app
-  .target("resolve-dynamic")
-  .produces(dynamicClasspath)
-  .tasks([
+const resolveDynamic = app.target({
+  name: "resolve-dynamic",
+  produces: [dynamicClasspath],
+  tasks: [
     MavenDepTask.of({
       coordinates: ["org.json:json:20230227", "com.google.guava:guava:31.1-jre"],
       repositories: [MavenRepos.CENTRAL, MavenRepos.GOOGLE],
       into: dynamicClasspath,
     }),
-  ]);
+  ],
+});
 
 /**
  * Output demonstration

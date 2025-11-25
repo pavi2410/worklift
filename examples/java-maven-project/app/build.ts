@@ -36,27 +36,29 @@ export const appDependencies = artifact("app-dependencies", z.array(z.string()))
 const app = project("app");
 
 // Clean build directory
-export const clean = app
-  .target("clean")
-  .tasks([DeleteTask.of({ paths: ["build"], recursive: true })]);
+export const clean = app.target({
+  name: "clean",
+  tasks: [DeleteTask.of({ paths: ["build"], recursive: true })],
+});
 
 // Resolve app dependencies (org.json)
-export const resolveDeps = app
-  .target("resolve-deps")
-  .produces(appDependencies)
-  .tasks([
+export const resolveDeps = app.target({
+  name: "resolve-deps",
+  produces: [appDependencies],
+  tasks: [
     MavenDepTask.of({
       coordinates: ["org.json:json:20230227"],
       into: appDependencies,
     }),
-  ]);
+  ],
+});
 
 // Compile app sources
 // Depends on: string-utils library JAR + external dependencies
-export const compile = app
-  .target("compile")
-  .dependsOn(clean, resolveDeps, stringUtils.jar)
-  .tasks([
+export const compile = app.target({
+  name: "compile",
+  dependsOn: [clean, resolveDeps, stringUtils.jar],
+  tasks: [
     JavacTask.of({
       sources: "src/main/java/com/example/app/Application.java",
       destination: "build/classes",
@@ -67,14 +69,15 @@ export const compile = app
       sourceVersion: "11",
       targetVersion: "11",
     }),
-  ]);
+  ],
+});
 
 // Compile app tests
 // Needs: JUnit + app dependencies + string-utils + compiled app classes
-export const compileTests = app
-  .target("compile-tests")
-  .dependsOn(compile, stringUtils.resolveDeps)
-  .tasks([
+export const compileTests = app.target({
+  name: "compile-tests",
+  dependsOn: [compile, stringUtils.resolveDeps],
+  tasks: [
     JavacTask.of({
       sources: "src/test/java/com/example/app/ApplicationTest.java",
       destination: "build/test-classes",
@@ -87,13 +90,14 @@ export const compileTests = app
       sourceVersion: "11",
       targetVersion: "11",
     }),
-  ]);
+  ],
+});
 
 // Run app tests
-export const test = app
-  .target("test")
-  .dependsOn(compileTests)
-  .tasks([
+export const test = app.target({
+  name: "test",
+  dependsOn: [compileTests],
+  tasks: [
     JUnitTask.of({
       testClasses: "build/test-classes",
       classpath: [
@@ -105,30 +109,33 @@ export const test = app
       reports: "build/reports",
       version: 5,
     }),
-  ]);
+  ],
+});
 
 // Package app as executable JAR
-export const jar = app
-  .target("jar")
-  .dependsOn(compile)
-  .tasks([
+export const jar = app.target({
+  name: "jar",
+  dependsOn: [compile],
+  tasks: [
     JarTask.of({
       from: "build/classes",
       to: "build/libs/app.jar",
       mainClass: "com.example.app.Application",
     }),
-  ]);
+  ],
+});
 
 // Build app (compile + test + package)
-export const build = app
-  .target("build")
-  .dependsOn(jar, test);
+export const build = app.target({
+  name: "build",
+  dependsOn: [jar, test],
+});
 
 // Run the application
-export const run = app
-  .target("run")
-  .dependsOn(compile)
-  .tasks([
+export const run = app.target({
+  name: "run",
+  dependsOn: [compile],
+  tasks: [
     JavaTask.of({
       mainClass: "com.example.app.Application",
       classpath: [
@@ -137,4 +144,5 @@ export const run = app
         "build/classes",
       ],
     }),
-  ]);
+  ],
+});

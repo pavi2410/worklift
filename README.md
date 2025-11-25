@@ -118,18 +118,23 @@ import { project, CopyTask, JavacTask } from "worklift";
 
 const app = project("app");
 
-const build = app.target("build").tasks([
-  JavacTask.of({
-    sources: "src/**/*.java",
-    destination: "build",
-  }),
-]);
+const build = app.target({
+  name: "build",
+  tasks: [
+    JavacTask.of({
+      sources: "src/**/*.java",
+      destination: "build",
+    }),
+  ],
+});
 
-const test = app.target("test")
-  .dependsOn(build)
-  .tasks([
+const test = app.target({
+  name: "test",
+  dependsOn: [build],
+  tasks: [
     CopyTask.of({ from: "test-data", to: "build/test-data" }),
-  ]);
+  ],
+});
 
 // Execute using target reference
 await build.execute();
@@ -147,26 +152,29 @@ const lib = project("lib");
 const app = project("app");
 
 // Define targets with tasks
-const libBuild = lib.target("build").tasks([
-  // Tasks go here
-]);
-
-const libTest = lib.target("test")
-  .dependsOn(libBuild)
-  .tasks([
+const libBuild = lib.target({
+  name: "build",
+  tasks: [
     // Tasks go here
-  ]);
+  ],
+});
 
-// Add project-level dependencies
-app.dependsOn(lib);
-
-// Target-level dependencies
-const frontend = project("frontend");
-const frontendBuild = frontend.target("build")
-  .dependsOn(libBuild)  // This runs after lib:build
-  .tasks([
+const libTest = lib.target({
+  name: "test",
+  dependsOn: [libBuild],
+  tasks: [
     // Tasks go here
-  ]);
+  ],
+});
+
+// Cross-project target dependencies
+const appBuild = app.target({
+  name: "build",
+  dependsOn: [libBuild],  // This runs after lib:build
+  tasks: [
+    // Tasks go here
+  ],
+});
 ```
 
 ### Targets
@@ -179,38 +187,51 @@ const app = project("app");
 const lib = project("lib");
 
 // Define targets
-const compile = app.target("compile").tasks([
-  // Tasks go here
-]);
-
-const packageTarget = app.target("package")
-  .dependsOn(compile)  // This runs after 'compile'
-  .tasks([
+const compile = app.target({
+  name: "compile",
+  tasks: [
     // Tasks go here
-  ]);
+  ],
+});
+
+const packageTarget = app.target({
+  name: "package",
+  dependsOn: [compile],  // This runs after 'compile'
+  tasks: [
+    // Tasks go here
+  ],
+});
 
 // Get target reference and execute
-const libBuild = lib.target("build").tasks([
-  // Tasks go here
-]);
+const libBuild = lib.target({
+  name: "build",
+  tasks: [
+    // Tasks go here
+  ],
+});
 await libBuild.execute(); // Execute directly
 
 // Target with cross-project dependencies using target references
 const frontend = project("frontend");
-const frontendCompile = frontend.target("compile").tasks([
-  // Tasks go here
-]);
+const frontendCompile = frontend.target({
+  name: "compile",
+  tasks: [
+    // Tasks go here
+  ],
+});
 
-const frontendBuild = frontend.target("build")
-  .dependsOn(frontendCompile, libBuild)  // Mix local and cross-project deps
-  .tasks([
+const frontendBuild = frontend.target({
+  name: "build",
+  dependsOn: [frontendCompile, libBuild],  // Mix local and cross-project deps
+  tasks: [
     // This runs after 'compile' and 'lib:build'
-  ]);
+  ],
+});
 ```
 
 **Dependency Types:**
-- Target reference - Depend on a specific target (recommended): `.dependsOn(libBuild)`
-- Project reference - Depend on another project: `app.dependsOn(lib)`
+- **Target reference** - Depend on a specific target (recommended): `dependsOn: [libBuild]`
+- **String** - Depend on a target by name within the same project: `dependsOn: ["clean"]`
 
 See [DEPENDENCIES.md](DEPENDENCIES.md) for detailed documentation.
 
@@ -369,43 +390,54 @@ import { project, CopyTask, MkdirTask, DeleteTask, JavacTask, JarTask } from "wo
 
 const app = project("app");
 
-const clean = app.target("clean").tasks([
-  DeleteTask.of({ paths: ["build", "dist"] }),
-]);
+const clean = app.target({
+  name: "clean",
+  tasks: [
+    DeleteTask.of({ paths: ["build", "dist"] }),
+  ],
+});
 
-const init = app.target("init")
-  .dependsOn(clean)
-  .tasks([
+const init = app.target({
+  name: "init",
+  dependsOn: [clean],
+  tasks: [
     MkdirTask.of({ paths: ["build/classes", "dist"] }),
-  ]);
+  ],
+});
 
-const compile = app.target("compile")
-  .dependsOn(init)
-  .tasks([
+const compile = app.target({
+  name: "compile",
+  dependsOn: [init],
+  tasks: [
     JavacTask.of({
       sources: "src/**/*.java",
       destination: "build/classes",
       sourceVersion: "11",
       targetVersion: "11",
     }),
-  ]);
+  ],
+});
 
-const packageTarget = app.target("package")
-  .dependsOn(compile)
-  .tasks([
+const packageTarget = app.target({
+  name: "package",
+  dependsOn: [compile],
+  tasks: [
     JarTask.of({
       from: "build/classes",
       to: "dist/app.jar",
       mainClass: "com.example.Main",
     }),
-  ]);
+  ],
+});
 
-const build = app.target("build")
-  .dependsOn(packageTarget)
-  .tasks([
+const build = app.target({
+  name: "build",
+  dependsOn: [packageTarget],
+  tasks: [
     CopyTask.of({ from: "README.md", to: "dist/" }),
     CopyTask.of({ from: "LICENSE", to: "dist/" }),
-  ]);
+  ],
+});
 
 // Execute a target
 await app.execute("build");
@@ -436,10 +468,13 @@ const resources = FileSet.dir("resources")
   .exclude("**/temp/**");
 
 // Use with tasks
-const build = app.target("build").tasks([
-  CopyTask.of({ files: sourceFiles, to: "build/src" }),
-  CopyTask.of({ files: resources, to: "build/resources" }),
-]);
+const build = app.target({
+  name: "build",
+  tasks: [
+    CopyTask.of({ files: sourceFiles, to: "build/src" }),
+    CopyTask.of({ files: resources, to: "build/resources" }),
+  ],
+});
 ```
 
 ### Advanced Patterns
@@ -458,16 +493,19 @@ const allDocumentation = FileSet.union(
 );
 
 // Use with operations
-const packageTarget = app.target("package").tasks([
-  CopyTask.of({ files: runtimeLibs, to: "dist/lib" }),
-  CopyTask.of({
-    files: sourceFiles,
-    to: "dist/sources",
-    rename: { pattern: /\.ts$/, replacement: ".js" },
-  }),
-  ZipTask.of({ files: allDocumentation, to: "dist/docs.zip" }),
-  DeleteTask.of({ files: FileSet.dir("build").include("**/*.tmp", "**/*.log") }),
-]);
+const packageTarget = app.target({
+  name: "package",
+  tasks: [
+    CopyTask.of({ files: runtimeLibs, to: "dist/lib" }),
+    CopyTask.of({
+      files: sourceFiles,
+      to: "dist/sources",
+      rename: { pattern: /\.ts$/, replacement: ".js" },
+    }),
+    ZipTask.of({ files: allDocumentation, to: "dist/docs.zip" }),
+    DeleteTask.of({ files: FileSet.dir("build").include("**/*.tmp", "**/*.log") }),
+  ],
+});
 ```
 
 ## Incremental Builds
@@ -518,9 +556,12 @@ export class MyCustomTask extends Task {
 }
 
 // Usage:
-const target = app.target("custom").tasks([
-  MyCustomTask.of({ option: "some-value" }),
-]);
+const target = app.target({
+  name: "custom",
+  tasks: [
+    MyCustomTask.of({ option: "some-value" }),
+  ],
+});
 ```
 
 ## License

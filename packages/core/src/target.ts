@@ -1,4 +1,4 @@
-import type { Target, Dependency, Project } from "./types.ts";
+import type { Target, TargetConfig, Dependency, Project } from "./types.ts";
 import type { Task } from "./Task.ts";
 import type { Artifact } from "./Artifact.ts";
 import { TaskScheduler } from "./TaskScheduler.ts";
@@ -14,32 +14,28 @@ export class TargetImpl implements Target {
   taskList: Task[] = [];
   producedArtifacts: Artifact[] = [];
 
-  constructor(name: string, project?: Project) {
-    this.name = name;
+  constructor(config: TargetConfig, project?: Project) {
+    this.name = config.name;
     this.project = project;
-  }
 
-  /**
-   * Add dependencies to this target
-   */
-  dependsOn(...deps: Dependency[]): Target {
-    this.dependencies.push(...deps);
-    return this;
-  }
+    if (config.dependsOn) {
+      this.dependencies = [...config.dependsOn];
+    }
 
-  /**
-   * Declare artifacts that this target produces
-   */
-  produces(...artifacts: Artifact[]): Target {
-    this.producedArtifacts.push(...artifacts);
-    return this;
+    if (config.tasks) {
+      this.setTasks(config.tasks);
+    }
+
+    if (config.produces) {
+      this.producedArtifacts = [...config.produces];
+    }
   }
 
   /**
    * Set tasks for this target
    * Validates all tasks when called
    */
-  tasks(taskList: Task[]): Target {
+  private setTasks(taskList: Task[]): void {
     // Validate all tasks immediately
     for (const task of taskList) {
       try {
@@ -52,7 +48,6 @@ export class TargetImpl implements Target {
     }
 
     this.taskList = taskList;
-    return this;
   }
 
   /**

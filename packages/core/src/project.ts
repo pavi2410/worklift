@@ -1,4 +1,4 @@
-import type { Project, Target, Dependency } from "./types.ts";
+import type { Project, Target, TargetConfig, Dependency } from "./types.ts";
 import { projects } from "./types.ts";
 import { TargetImpl } from "./target.ts";
 import { Logger } from "./logging/index.ts";
@@ -9,7 +9,6 @@ import { Logger } from "./logging/index.ts";
 export class ProjectImpl implements Project {
   name: string;
   baseDir?: string;
-  dependencies: Project[] = [];
   targets = new Map<string, Target>();
 
   constructor(name: string, baseDir?: string) {
@@ -20,26 +19,18 @@ export class ProjectImpl implements Project {
   }
 
   /**
-   * Add project dependencies (returns this for chaining)
-   */
-  dependsOn(...deps: Project[]): Project {
-    this.dependencies.push(...deps);
-    return this;
-  }
-
-  /**
    * Create a new target
    */
-  target(name: string): Target {
+  target(config: TargetConfig): Target {
     // Check if target already exists
-    if (this.targets.has(name)) {
+    if (this.targets.has(config.name)) {
       throw new Error(
-        `Target "${name}" already exists in project "${this.name}"`
+        `Target "${config.name}" already exists in project "${this.name}"`
       );
     }
 
-    const target = new TargetImpl(name, this);
-    this.targets.set(name, target);
+    const target = new TargetImpl(config, this);
+    this.targets.set(config.name, target);
     return target;
   }
 
@@ -59,53 +50,15 @@ export class ProjectImpl implements Project {
     logger.debug(`Executing target: ${this.name}:${targetName}`);
 
     const executedTargets = new Set<string>();
-    const executedProjects = new Set<string>();
     const inProgress = new Set<string>();
-
-    // Execute project-level dependencies first
-    for (const depProject of this.dependencies) {
-      await this.executeProjectDeps(depProject, executedProjects, inProgress);
-    }
 
     await this.executeTargetWithDeps(
       target,
       executedTargets,
-      executedProjects,
       inProgress
     );
 
     logger.debug(`Target completed: ${this.name}:${targetName}`);
-  }
-
-  /**
-   * Execute project dependencies recursively
-   */
-  private async executeProjectDeps(
-    project: Project,
-    executedProjects: Set<string>,
-    inProgress: Set<string>
-  ): Promise<void> {
-    const projectKey = project.name;
-
-    // Check for cyclic dependencies
-    if (inProgress.has(projectKey)) {
-      throw new Error(`Cyclic project dependency detected: ${projectKey}`);
-    }
-
-    // Skip if already executed
-    if (executedProjects.has(projectKey)) {
-      return;
-    }
-
-    inProgress.add(projectKey);
-
-    // Execute this project's dependencies first
-    for (const depProject of project.dependencies) {
-      await this.executeProjectDeps(depProject, executedProjects, inProgress);
-    }
-
-    inProgress.delete(projectKey);
-    executedProjects.add(projectKey);
   }
 
   /**
@@ -114,7 +67,6 @@ export class ProjectImpl implements Project {
   private async executeTargetWithDeps(
     target: Target,
     executedTargets: Set<string>,
-    executedProjects: Set<string>,
     inProgress: Set<string>
   ): Promise<void> {
     const targetKey = `${this.name}:${target.name}`;
@@ -136,7 +88,6 @@ export class ProjectImpl implements Project {
       await this.executeDependency(
         dep,
         executedTargets,
-        executedProjects,
         inProgress
       );
     }
@@ -148,12 +99,11 @@ export class ProjectImpl implements Project {
   }
 
   /**
-   * Execute a single dependency (can be string, Target, or Project)
+   * Execute a single dependency (can be string or Target)
    */
   private async executeDependency(
     dep: Dependency,
     executedTargets: Set<string>,
-    executedProjects: Set<string>,
     inProgress: Set<string>
   ): Promise<void> {
     if (typeof dep === "string") {
@@ -167,12 +117,11 @@ export class ProjectImpl implements Project {
       await this.executeTargetWithDeps(
         target,
         executedTargets,
-        executedProjects,
         inProgress
       );
-    } else if ("taskList" in dep && "dependencies" in dep) {
-      // Target dependency (has taskList and dependencies properties)
-      const target = dep as Target;
+    } else {
+      // Target dependency from another project
+      const target = dep;
       const depProject = target.project;
 
       if (!depProject) {
@@ -181,25 +130,17 @@ export class ProjectImpl implements Project {
         );
       }
 
-      // Execute the project's dependencies first
-      await this.executeProjectDeps(depProject, executedProjects, inProgress);
-
-      // Then execute the specific target
+      // Execute the specific target (and its dependencies)
       const targetKey = `${depProject.name}:${target.name}`;
       if (!executedTargets.has(targetKey)) {
-        // Execute dependencies of that target in the context of the dependency project
         if (depProject instanceof ProjectImpl) {
           await depProject.executeTargetWithDeps(
             target,
             executedTargets,
-            executedProjects,
             inProgress
           );
         }
       }
-    } else {
-      // Project dependency
-      await this.executeProjectDeps(dep, executedProjects, inProgress);
     }
   }
 }
