@@ -9,10 +9,10 @@
   },
   "dependencies": {
     "@worklift/core": "workspace:*",
-    "glob": "^11.0.0",
-    "minimatch": "^9.0.3"
+    "glob": "^13.0.0",
+    "minimatch": "^10.1.1"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0"
+    "@types/node": "^24.10.1"
   }
 }
