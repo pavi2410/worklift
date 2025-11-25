@@ -105,6 +105,6 @@ export const build = stringUtils.target({
   dependsOn: [jar, test],
 });
 
-// Clean build outputs (derived from target outputs)
-// Note: resolveDeps is excluded to preserve downloaded dependencies
+// Clean target - deletes: build/classes, build/test-classes, build/reports, build/libs/string-utils.jar
+// Note: resolveDeps excluded to preserve downloaded dependencies
 export const clean = stringUtils.clean({ targets: [compile, compileTests, test, jar] });

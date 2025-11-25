@@ -10,27 +10,18 @@
 
 import { project } from "worklift";
 import { JavacTask, JarTask, JavaTask } from "worklift";
-import { DeleteTask } from "worklift";
 import * as lib from "../lib/build.ts";
 
 // ============================================================================
 // Application Module
 // ============================================================================
 
-const app = project("app").dependsOn(lib.lib);
-
-// Clean target - removes all build artifacts
-export const clean = app.target({
-  name: "clean",
-  tasks: [
-    DeleteTask.of({ paths: ["build"], recursive: true }),
-  ],
-});
+const app = project("app");
 
 // Compile target - compiles Java sources with library on classpath
 export const compile = app.target({
   name: "compile",
-  dependsOn: [clean, lib.jar], // Depends on lib being packaged
+  dependsOn: [lib.jar], // Depends on lib being packaged
   tasks: [
     JavacTask.of({
       sources: "src/com/example/app/Main.java",
@@ -67,3 +58,6 @@ export const run = app.target({
     }),
   ],
 });
+
+// Clean target - deletes: build/classes, build/demo-app.jar
+export const clean = app.clean({ targets: [compile, jar] });

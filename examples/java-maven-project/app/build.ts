@@ -140,6 +140,6 @@ export const run = app.target({
   ],
 });
 
-// Clean build outputs (derived from target outputs)
-// Note: resolveDeps is excluded to preserve downloaded dependencies
+// Clean target - deletes: build/classes, build/test-classes, build/reports, build/libs/app.jar
+// Note: resolveDeps excluded to preserve downloaded dependencies
 export const clean = app.clean({ targets: [compile, compileTests, test, jar] });

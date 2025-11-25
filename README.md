@@ -386,20 +386,12 @@ import { project, CopyTask, MoveTask, JavacTask, ZipTask } from "worklift";
 ## Example
 
 ```typescript
-import { project, CopyTask, MkdirTask, DeleteTask, JavacTask, JarTask } from "worklift";
+import { project, CopyTask, MkdirTask, JavacTask, JarTask } from "worklift";
 
 const app = project("app");
 
-const clean = app.target({
-  name: "clean",
-  tasks: [
-    DeleteTask.of({ paths: ["build", "dist"] }),
-  ],
-});
-
 const init = app.target({
   name: "init",
-  dependsOn: [clean],
   tasks: [
     MkdirTask.of({ paths: ["build/classes", "dist"] }),
   ],
@@ -438,6 +430,9 @@ const build = app.target({
     CopyTask.of({ from: "LICENSE", to: "dist/" }),
   ],
 });
+
+// Clean target - deletes: build/classes, dist/app.jar, dist/
+const clean = app.clean({ targets: [compile, packageTarget, build] });
 
 // Execute a target
 await app.execute("build");

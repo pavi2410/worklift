@@ -15,7 +15,7 @@ import {
   MavenDepTask,
   MavenRepos,
 } from "@worklift/java-tasks";
-import { MkdirTask, DeleteTask } from "@worklift/file-tasks";
+import { MkdirTask } from "@worklift/file-tasks";
 import { z } from "zod";
 
 // Create a simple Java application project
@@ -25,16 +25,9 @@ const app = project("maven-app");
 const compileClasspath = artifact("compile-classpath", z.array(z.string()));
 const testClasspath = artifact("test-classpath", z.array(z.string()));
 
-// Clean build directory
-const clean = app.target({
-  name: "clean",
-  tasks: [DeleteTask.of({ paths: ["build"] })],
-});
-
 // Create build directories
 const prepare = app.target({
   name: "prepare",
-  dependsOn: [clean],
   tasks: [
     MkdirTask.of({ paths: ["build/classes"] }),
     MkdirTask.of({ paths: ["build/test-classes"] }),
@@ -123,6 +116,9 @@ const build = app.target({
   name: "build",
   dependsOn: [compileSrc, compileTest],
 });
+
+// Clean target - deletes: build/classes, build/test-classes
+const clean = app.clean({ targets: [prepare, compileSrc, compileTest] });
 
 /**
  * To run this example:

@@ -7,7 +7,6 @@
 
 import { project } from "worklift";
 import { JavacTask, JarTask } from "worklift";
-import { DeleteTask } from "worklift";
 
 // ============================================================================
 // Library Module
@@ -15,18 +14,9 @@ import { DeleteTask } from "worklift";
 
 export const lib = project("lib");
 
-// Clean target - removes all build artifacts
-export const clean = lib.target({
-  name: "clean",
-  tasks: [
-    DeleteTask.of({ paths: ["build"], recursive: true }),
-  ],
-});
-
 // Compile target - compiles Java sources to class files
 export const compile = lib.target({
   name: "compile",
-  dependsOn: [clean],
   tasks: [
     JavacTask.of({
       sources: "src/com/example/lib/StringUtils.java",
@@ -46,3 +36,6 @@ export const jar = lib.target({
     }),
   ],
 });
+
+// Clean target - deletes: build/classes, build/string-utils.jar
+export const clean = lib.clean({ targets: [compile, jar] });
