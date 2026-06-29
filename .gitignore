@@ -6,3 +6,4 @@ dist/
 packages/*/src/**/*.js
 packages/*/src/**/*.d.ts
 packages/*/src/**/*.d.ts.map
+.DS_Store
