@@ -10,6 +10,8 @@ const TASK_TYPE_KEYS = new Set([
   "delete",
   "mkdir",
   "create-file",
+  "write-file",
+  "template",
   "zip",
   "unzip",
   "exec",

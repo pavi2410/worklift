@@ -7,6 +7,8 @@ export { MoveTask } from "./MoveTask.ts";
 export { DeleteTask } from "./DeleteTask.ts";
 export { MkdirTask } from "./MkdirTask.ts";
 export { CreateFileTask } from "./CreateFileTask.ts";
+export { WriteFileTask } from "./WriteFileTask.ts";
+export { TemplateTask } from "./TemplateTask.ts";
 export { ZipTask } from "./ZipTask.ts";
 export { UnzipTask } from "./UnzipTask.ts";
 export { ExecTask } from "./ExecTask.ts";

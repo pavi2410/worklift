@@ -17,7 +17,7 @@ Worklift lets you define build processes in YAML instead of XML or imperative sc
   - Automatic cyclic dependency detection
 - **Extensible**: Add custom tasks in TypeScript when needed
 - **Package-based Architecture**: Modular monorepo with core, file tasks, and Java tasks
-- **Built-in Tasks**: File operations (copy, move, delete, mkdir, zip, exec) and Java support (javac, jar, java, junit, maven-dep)
+- **Built-in Tasks**: File operations (copy, move, delete, mkdir, write-file, template, zip, exec) and Java support (javac, jar, java, junit, maven-dep)
 
 ## Monorepo Structure
 
@@ -221,7 +221,9 @@ targets:
 | `move` | Move/rename files |
 | `delete` | Delete files or directories |
 | `mkdir` | Create directories |
-| `create-file` | Create a file with content |
+| `create-file` | Create a file with content (legacy `path` key) |
+| `write-file` | Write a file with literal content |
+| `template` | Render a template file with `{{var}}` substitution |
 | `zip` / `unzip` | Archive operations |
 | `exec` | Run shell commands |
 | `javac` | Compile Java sources |
@@ -250,6 +252,17 @@ targets:
 
 - delete:
     paths: [build, dist]
+
+- write-file:
+    to: build/version.txt
+    content: "1.0.0"
+
+- template:
+    from: src/app.properties.template
+    to: build/app.properties
+    vars:
+      version: "1.0.0"
+      name: my-app
 
 - exec:
     command: npm

@@ -6,6 +6,8 @@ import {
   DeleteTask,
   MkdirTask,
   CreateFileTask,
+  WriteFileTask,
+  TemplateTask,
   ZipTask,
   UnzipTask,
   ExecTask,
@@ -30,6 +32,8 @@ const TASK_TYPES = new Set([
   "delete",
   "mkdir",
   "create-file",
+  "write-file",
+  "template",
   "zip",
   "unzip",
   "exec",
@@ -77,6 +81,18 @@ export function parseTask(
         path: requireString(config, "path"),
         content: requireString(config, "content"),
         encoding: optionalString(config, "encoding") as BufferEncoding | undefined,
+      });
+    case "write-file":
+      return WriteFileTask.of({
+        to: requireString(config, "to"),
+        content: requireString(config, "content"),
+        encoding: optionalString(config, "encoding") as BufferEncoding | undefined,
+      });
+    case "template":
+      return TemplateTask.of({
+        from: requireString(config, "from"),
+        to: requireString(config, "to"),
+        vars: optionalStringRecord(config, "vars"),
       });
     case "zip":
       return parseZipTask(config);
@@ -315,4 +331,18 @@ function optionalRecord(
     throw new Error(`Task config '${key}' must be an object`);
   }
   return value as Record<string, string>;
+}
+
+function optionalStringRecord(
+  config: Record<string, unknown>,
+  key: string
+): Record<string, string> | undefined {
+  const value = optionalRecord(config, key);
+  if (value === undefined) return undefined;
+  for (const [entryKey, entryValue] of Object.entries(value)) {
+    if (typeof entryValue !== "string") {
+      throw new Error(`Task config '${key}.${entryKey}' must be a string`);
+    }
+  }
+  return value;
 }
