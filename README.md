@@ -78,14 +78,18 @@ Instead of XML like Apache Ant:
 You can write YAML:
 
 ```yaml
+java:
+  source: "11"
+  target: "11"
+
 targets:
   build:
     - javac:
         sources: src/**/*.java
         destination: build/classes
-        sourceVersion: "11"
-        targetVersion: "11"
 ```
+
+`java:` sets defaults for `javac` tasks (`source`/`target` or `sourceVersion`/`targetVersion`, plus `encoding`). Per-task values override the project defaults.
 
 Each build file defines **one project**. The project name defaults to the containing directory for `build.yaml`, or the filename otherwise. Override with `name:`:
 

@@ -1,5 +1,6 @@
 import type { Task } from "@worklift/core";
 import type { Artifact } from "@worklift/core";
+import type { JavaDefaults } from "./parseJavaDefaults.ts";
 import { parseTask } from "./parseTask.ts";
 import type { YamlTaskDef } from "./types.ts";
 
@@ -27,14 +28,17 @@ export function parseTargetTasks(
   targetDef: unknown,
   targetName: string,
   artifacts: Map<string, Artifact<string[]>>,
-  projectName: string
+  projectName: string,
+  javaDefaults?: JavaDefaults
 ): Task[] {
   if (targetDef === null || targetDef === undefined) {
     return [];
   }
 
   if (Array.isArray(targetDef)) {
-    return targetDef.map((t) => parseTask(t as YamlTaskDef, artifacts, projectName));
+    return targetDef.map((t) =>
+      parseTask(t as YamlTaskDef, artifacts, projectName, javaDefaults)
+    );
   }
 
   if (typeof targetDef === "object") {
@@ -51,7 +55,9 @@ export function parseTargetTasks(
       if (!Array.isArray(tasks)) {
         throw new Error(`Target "${targetName}": tasks must be a list`);
       }
-      return tasks.map((t) => parseTask(t as YamlTaskDef, artifacts, projectName));
+      return tasks.map((t) =>
+        parseTask(t as YamlTaskDef, artifacts, projectName, javaDefaults)
+      );
     }
 
     if (Object.keys(obj).length === 0) {
@@ -59,7 +65,7 @@ export function parseTargetTasks(
     }
 
     if (isTaskDef(obj)) {
-      return [parseTask(obj as YamlTaskDef, artifacts, projectName)];
+      return [parseTask(obj as YamlTaskDef, artifacts, projectName, javaDefaults)];
     }
 
     throw new Error(

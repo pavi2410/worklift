@@ -212,6 +212,32 @@ targets:
     expect(typeof compile.dependencies[0]).toBe("object");
   });
 
+  test("applies java defaults to javac tasks", async () => {
+    const file = writeBuild(
+      "app/build.yaml",
+      `
+java:
+  source: "11"
+  target: "17"
+targets:
+  compile:
+    - javac:
+        sources: src/Main.java
+        destination: build/classes
+`
+    );
+
+    await loadYamlBuild(file);
+
+    const compile = getProjectRegistry().get("app")!.targets.get("compile")!;
+    const task = compile.taskList[0] as unknown as {
+      sourceVer?: string;
+      targetVer?: string;
+    };
+    expect(task.sourceVer).toBe("11");
+    expect(task.targetVer).toBe("17");
+  });
+
   test("rejects unknown dependency references", async () => {
     const file = writeBuild(
       "app/build.yaml",

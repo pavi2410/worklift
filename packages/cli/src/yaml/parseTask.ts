@@ -19,6 +19,7 @@ import {
   WarTask,
 } from "@worklift/java-tasks";
 import { MAVEN_PRESETS, MAVEN_REPOS } from "./presets.ts";
+import type { JavaDefaults } from "./parseJavaDefaults.ts";
 import { parseClasspath, resolveArtifactRef } from "./parseClasspath.ts";
 import { isFileSetDef, parseFileSet } from "./parseFileSet.ts";
 import type { YamlTaskDef } from "./types.ts";
@@ -43,7 +44,8 @@ const TASK_TYPES = new Set([
 export function parseTask(
   def: YamlTaskDef,
   artifacts: Map<string, Artifact<string[]>>,
-  projectName: string
+  projectName: string,
+  javaDefaults?: JavaDefaults
 ): Task {
   const keys = Object.keys(def);
   if (keys.length !== 1) {
@@ -96,9 +98,11 @@ export function parseTask(
         sources: config.sources as string | string[],
         destination: requireString(config, "destination"),
         classpath: parseClasspath(config.classpath, artifacts, projectName),
-        sourceVersion: optionalString(config, "sourceVersion"),
-        targetVersion: optionalString(config, "targetVersion"),
-        encoding: optionalString(config, "encoding"),
+        sourceVersion:
+          optionalString(config, "sourceVersion") ?? javaDefaults?.sourceVersion,
+        targetVersion:
+          optionalString(config, "targetVersion") ?? javaDefaults?.targetVersion,
+        encoding: optionalString(config, "encoding") ?? javaDefaults?.encoding,
       });
     case "jar":
       return parseJarTask(config);

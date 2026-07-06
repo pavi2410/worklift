@@ -108,7 +108,8 @@ export async function loadYamlBuild(
       targetDef,
       targetName,
       artifacts,
-      projectDef.name
+      projectDef.name,
+      projectDef.java
     );
     const target = proj.target({ name: targetName, tasks });
 

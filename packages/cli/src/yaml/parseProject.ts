@@ -1,4 +1,5 @@
 import { basename, dirname } from "path";
+import { parseJavaDefaults } from "./parseJavaDefaults.ts";
 import type { ParsedProjectDef } from "./types.ts";
 
 /**
@@ -16,6 +17,7 @@ export function parseProjectFromDoc(
   return {
     name: resolveProjectName(doc, filePath),
     baseDir: doc.baseDir as string | undefined,
+    java: parseJavaDefaults(doc.java),
     artifacts: doc.artifacts as ParsedProjectDef["artifacts"],
     dependencies: doc.dependencies as ParsedProjectDef["dependencies"],
     clean: doc.clean as ParsedProjectDef["clean"],

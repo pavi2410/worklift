@@ -1,6 +1,10 @@
 artifacts:
   junitClasspath: {}
 
+java:
+  source: "11"
+  target: "11"
+
 dependencies:
   compile-tests: [compile]
   test: [compile-tests]
@@ -19,8 +23,6 @@ targets:
     - javac:
         sources: src/main/java/com/example/utils/StringUtils.java
         destination: build/classes
-        sourceVersion: "11"
-        targetVersion: "11"
 
   compile-tests:
     - javac:
@@ -29,8 +31,6 @@ targets:
         classpath:
           - $junitClasspath
           - build/classes
-        sourceVersion: "11"
-        targetVersion: "11"
 
   test:
     - junit:

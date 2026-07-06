@@ -1,6 +1,10 @@
 artifacts:
   appDependencies: {}
 
+java:
+  source: "11"
+  target: "11"
+
 dependencies:
   compile-tests: [compile, string-utils:resolve-deps]
   test: [compile-tests]
@@ -24,8 +28,6 @@ targets:
         classpath:
           - $appDependencies
           - string-utils:jar
-        sourceVersion: "11"
-        targetVersion: "11"
 
   compile-tests:
     - javac:
@@ -36,8 +38,6 @@ targets:
           - $appDependencies
           - string-utils:jar
           - compile
-        sourceVersion: "11"
-        targetVersion: "11"
 
   test:
     - junit:
