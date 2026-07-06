@@ -122,9 +122,10 @@ targets:
 
 ```yaml
 # app/build.yaml  (project name: app)
+dependencies:
+  build: [lib:jar]
 targets:
   build:
-    dependsOn: [lib:jar]
     tasks:
       - javac:
           sources: src/**/*.java
@@ -145,9 +146,12 @@ baseDir: .         # Optional: defaults to the build file's directory
 artifacts:         # Optional: named values passed between tasks
   classpath: {}
 
+dependencies:      # Optional: target dependency graph
+  build: [compile, package]
+  package: [compile]
+
 targets:
   target-name:
-    dependsOn: [other-target, other-project:target]
     tasks:
       - task-type:
           option: value
@@ -181,13 +185,16 @@ The scheduler runs `resolve-deps` before `compile` automatically.
 
 ### Dependencies
 
-Target dependencies use `dependsOn`:
+Target dependencies are declared in a top-level `dependencies` block mapping target names to their prerequisites:
 
 ```yaml
-dependsOn:
-  - compile              # Same project
-  - lib:jar              # Cross-project (project:target)
+dependencies:
+  compile: lib:jar              # single dependency
+  build: [jar, test]             # multiple dependencies
+  package: compile
 ```
+
+Cross-project references use `project:target` syntax (e.g. `lib:jar`).
 
 ### Clean targets
 

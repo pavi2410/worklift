@@ -4,6 +4,13 @@ artifacts:
   compileClasspath: {}
   testClasspath: {}
 
+dependencies:
+  compile-src: [prepare]
+  compile-test: [compile-src]
+  test: [compile-src, compile-test]
+  run: [compile-src]
+  build: [compile-src, compile-test]
+
 targets:
   prepare:
     tasks:
@@ -29,8 +36,6 @@ targets:
           into: $testClasspath
 
   compile-src:
-    dependsOn:
-      - prepare
     tasks:
       - javac:
           sources: src/**/*.java
@@ -39,8 +44,6 @@ targets:
             - $compileClasspath
 
   compile-test:
-    dependsOn:
-      - compile-src
     tasks:
       - javac:
           sources: test/**/*.java
@@ -51,9 +54,6 @@ targets:
             - build/classes
 
   test:
-    dependsOn:
-      - compile-src
-      - compile-test
     tasks:
       - java:
           mainClass: com.example.TestRunner
@@ -66,8 +66,6 @@ targets:
             - --verbose
 
   run:
-    dependsOn:
-      - compile-src
     tasks:
       - java:
           mainClass: com.example.Main
@@ -75,10 +73,7 @@ targets:
             - $compileClasspath
             - build/classes
 
-  build:
-    dependsOn:
-      - compile-src
-      - compile-test
+  build: {}
 
   clean:
     clean:

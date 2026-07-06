@@ -24,13 +24,14 @@ describe("loadYamlBuild", () => {
     const file = writeBuild(
       "app/build.yaml",
       `
+dependencies:
+  build: [init]
 targets:
   init:
     tasks:
       - mkdir:
           paths: [build]
   build:
-    dependsOn: [init]
     tasks:
       - copy:
           from: README.md
@@ -64,9 +65,10 @@ targets:
       `
 imports:
   - ../lib/build.yaml
+dependencies:
+  build: [lib:jar]
 targets:
   build:
-    dependsOn: [lib:jar]
     tasks:
       - mkdir:
           paths: [dist]
@@ -161,5 +163,24 @@ imports:
 
     await loadYamlBuild(root);
     expect(getProjectRegistry().size).toBe(1);
+  });
+
+  test("rejects dependencies for unknown targets", async () => {
+    const file = writeBuild(
+      "app/build.yaml",
+      `
+dependencies:
+  missing: [init]
+targets:
+  init:
+    tasks:
+      - mkdir:
+          paths: [build]
+`
+    );
+
+    await expect(loadYamlBuild(file)).rejects.toThrow(
+      "Dependency target not found"
+    );
   });
 });

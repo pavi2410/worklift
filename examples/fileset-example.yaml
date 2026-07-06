@@ -1,5 +1,8 @@
 name: fileset-demo
 
+dependencies:
+  production: [clean-temp]
+
 targets:
   copy-sources:
     tasks:
@@ -138,8 +141,6 @@ targets:
               - "**/dist/**/*.map"
 
   production:
-    dependsOn:
-      - clean-temp
     tasks:
       - copy:
           files:

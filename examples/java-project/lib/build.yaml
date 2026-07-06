@@ -1,3 +1,6 @@
+dependencies:
+  jar: [compile]
+
 targets:
   compile:
     tasks:
@@ -6,8 +9,6 @@ targets:
           destination: build/classes
 
   jar:
-    dependsOn:
-      - compile
     tasks:
       - jar:
           from: build/classes

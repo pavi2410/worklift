@@ -1,7 +1,10 @@
+dependencies:
+  compile: [lib:jar]
+  jar: [compile]
+  run: [compile]
+
 targets:
   compile:
-    dependsOn:
-      - lib:jar
     tasks:
       - javac:
           sources: src/com/example/app/Main.java
@@ -10,8 +13,6 @@ targets:
             - ../lib/build/string-utils.jar
 
   jar:
-    dependsOn:
-      - compile
     tasks:
       - jar:
           from: build/classes
@@ -19,8 +20,6 @@ targets:
           mainClass: com.example.app.Main
 
   run:
-    dependsOn:
-      - compile
     tasks:
       - java:
           mainClass: com.example.app.Main

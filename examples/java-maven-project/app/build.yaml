@@ -1,6 +1,14 @@
 artifacts:
   appDependencies: {}
 
+dependencies:
+  compile: [string-utils:jar]
+  compile-tests: [compile, string-utils:resolve-deps]
+  test: [compile-tests]
+  jar: [compile]
+  build: [jar, test]
+  run: [compile]
+
 targets:
   resolve-deps:
     tasks:
@@ -10,8 +18,6 @@ targets:
           into: $appDependencies
 
   compile:
-    dependsOn:
-      - string-utils:jar
     tasks:
       - javac:
           sources: src/main/java/com/example/app/Application.java
@@ -23,9 +29,6 @@ targets:
           targetVersion: "11"
 
   compile-tests:
-    dependsOn:
-      - compile
-      - string-utils:resolve-deps
     tasks:
       - javac:
           sources: src/test/java/com/example/app/ApplicationTest.java
@@ -39,8 +42,6 @@ targets:
           targetVersion: "11"
 
   test:
-    dependsOn:
-      - compile-tests
     tasks:
       - junit:
           testClasses: build/test-classes
@@ -53,22 +54,15 @@ targets:
           version: 5
 
   jar:
-    dependsOn:
-      - compile
     tasks:
       - jar:
           from: build/classes
           to: build/libs/app.jar
           mainClass: com.example.app.Application
 
-  build:
-    dependsOn:
-      - jar
-      - test
+  build: {}
 
   run:
-    dependsOn:
-      - compile
     tasks:
       - java:
           mainClass: com.example.app.Application

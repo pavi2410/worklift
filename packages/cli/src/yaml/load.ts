@@ -106,14 +106,23 @@ export async function loadYamlBuild(
         name: targetName,
         tasks,
       });
+    }
+  }
 
-      if (targetDef.dependsOn?.length) {
-        pendingDeps.push({
-          target,
-          dependsOn: targetDef.dependsOn,
-          projectName: projectDef.name,
-        });
+  if (projectDef.dependencies) {
+    for (const [targetName, deps] of Object.entries(projectDef.dependencies)) {
+      const target = proj.targets.get(targetName);
+      if (!target) {
+        throw new Error(
+          `Dependency target not found: ${projectDef.name}:${targetName}`
+        );
       }
+      const dependsOn = Array.isArray(deps) ? deps : [deps];
+      pendingDeps.push({
+        target,
+        dependsOn,
+        projectName: projectDef.name,
+      });
     }
   }
 

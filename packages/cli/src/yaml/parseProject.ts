@@ -17,6 +17,7 @@ export function parseProjectFromDoc(
     name: resolveProjectName(doc, filePath),
     baseDir: doc.baseDir as string | undefined,
     artifacts: doc.artifacts as ParsedProjectDef["artifacts"],
+    dependencies: doc.dependencies as ParsedProjectDef["dependencies"],
     targets: doc.targets as ParsedProjectDef["targets"],
   };
 }

@@ -9,6 +9,7 @@ export interface YamlBuildFile {
   name?: string;
   baseDir?: string;
   artifacts?: Record<string, YamlArtifactDef>;
+  dependencies?: Record<string, string | string[]>;
   targets?: Record<string, YamlTargetDef>;
 }
 
@@ -17,7 +18,6 @@ export interface YamlArtifactDef {
 }
 
 export interface YamlTargetDef {
-  dependsOn?: string[];
   tasks?: YamlTaskDef[];
   clean?: string[];
 }
@@ -36,5 +36,6 @@ export interface ParsedProjectDef {
   name: string;
   baseDir?: string;
   artifacts?: Record<string, YamlArtifactDef>;
+  dependencies?: Record<string, string | string[]>;
   targets?: Record<string, YamlTargetDef>;
 }
