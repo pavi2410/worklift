@@ -123,82 +123,74 @@ bun ../../packages/cli/src/index.ts app:build
 
 ### 1. Maven Dependency Resolution
 
-```typescript
-import { Artifact } from "@worklift/core";
+```yaml
+# string-utils/build.yaml
+artifacts:
+  junitClasspath: {}
 
-// Define a typed artifact for the classpath
-const junitClasspath = Artifact.of<string[]>();
-
-// MavenDepTask produces the artifact - scheduler infers dependencies automatically
-const resolveDeps = project.target({
-  name: "resolve-deps",
-  tasks: [
-    MavenDepTask.of({
-      coordinates: ["org.junit.jupiter:junit-jupiter:5.9.3"],
-      into: junitClasspath,
-    }),
-  ],
-});
+targets:
+  resolve-deps:
+    - maven-dep:
+        preset: junit5
+        into: $junitClasspath
 ```
+
+The scheduler runs `resolve-deps` before any task that references `$junitClasspath`.
 
 ### 2. Library Module Dependencies
 
-```typescript
-// App depends on string-utils JAR
-const appCompile = app.target({
-  name: "compile",
-  dependsOn: [stringUtilsJar],  // Ensures library is built first
-  tasks: [
-    JavacTask.of({
-      sources: "app/src/main/java/**/*.java",
-      destination: "app/build/classes",
-      classpath: ["string-utils/build/libs/string-utils.jar"],
-    }),
-  ],
-});
+```yaml
+# app/build.yaml
+dependencies:
+  compile: [string-utils:jar]
+
+targets:
+  compile:
+    - javac:
+        sources: src/main/java/com/example/app/Application.java
+        destination: build/classes
+        classpath:
+          - ../string-utils/build/libs/string-utils.jar
 ```
 
 ### 3. Testing with JUnit 5
 
-```typescript
-// JavaTask consumes the junitClasspath artifact
-// The scheduler ensures resolveDeps runs first automatically!
-const test = project.target({
-  name: "test",
-  tasks: [
-    JavaTask.of({
-      mainClass: "org.junit.platform.console.ConsoleLauncher",
-      classpath: [junitClasspath, "build/classes", "build/test-classes"],
-      args: ["--scan-classpath", "build/test-classes", "--fail-if-no-tests"],
-    }),
-  ],
-});
+```yaml
+targets:
+  test:
+    - junit:
+        testClasses: build/test-classes
+        classpath:
+          - $junitClasspath
+          - build/classes
+        reports: build/reports
+        version: 5
 ```
 
 ### 4. JAR Packaging
 
-```typescript
-const jar = project.target({
-  name: "jar",
-  tasks: [
-    JarTask.of({
-      from: "build/classes",
-      to: "build/libs/app.jar",
-      mainClass: "com.example.app.Application",
-    }),
-  ],
-});
+```yaml
+targets:
+  jar:
+    - jar:
+        from: build/classes
+        to: build/libs/app.jar
+        mainClass: com.example.app.Application
 ```
 
 ### 5. Multi-Module Coordination
 
-```typescript
-// Build everything in correct order
-const buildAll = app.target({
-  name: "build-all",
-  dependsOn: [stringUtilsBuild, appBuild],
-});
+```yaml
+# string-utils/build.yaml
+dependencies:
+  build: [jar, test]
+
+# app/build.yaml
+dependencies:
+  build: [jar, test]
 ```
+
+Aggregation targets like `build` need no task list — they are created from the `dependencies` block.
 
 ## Maven Conventions Used
 
@@ -226,12 +218,11 @@ While this example follows Maven conventions, it uses **Worklift** instead of Ma
 
 | Aspect | Maven | Worklift |
 |--------|-------|----------|
-| Configuration | XML (`pom.xml`) | TypeScript (type-safe!) |
-| Build Script | Declarative | Programmatic + Declarative |
-| Plugin System | XML-based | Native TypeScript/JavaScript |
-| IDE Support | Specialized Maven plugins | Any TypeScript IDE |
-| Learning Curve | Maven-specific | Standard TypeScript/JavaScript |
-| Extensibility | Write Java plugins | Write TypeScript functions |
+| Configuration | XML (`pom.xml`) | YAML (`build.yaml`) |
+| Build model | Declarative | Declarative targets and tasks |
+| Extension | Java plugins | TypeScript custom tasks |
+| Module wiring | Parent POM / reactor | `imports` in root build file |
+| Dependencies | `pom.xml` coordinates | `maven-dep` task + artifacts |
 
 ## Expected Output
 

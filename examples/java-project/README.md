@@ -108,72 +108,84 @@ bun ../../packages/cli/src/index.ts app:run
 
 ### 1. Multi-Project Setup
 
-```typescript
-const lib = project("lib");
-const app = project("app");
+Each module has its own `build.yaml`. The root file imports them:
+
+```yaml
+# build.yaml
+imports:
+  - ./lib/build.yaml
+  - ./app/build.yaml
 ```
 
-Projects are created independently. Dependencies between them are expressed through target references.
+Project names default to the directory containing `build.yaml` (`lib`, `app`).
 
 ### 2. Java Compilation
 
-```typescript
-JavacTask.of({
-  sources: "lib/src/com/example/lib/StringUtils.java",
-  destination: "lib/build/classes",
-})
+```yaml
+# lib/build.yaml
+targets:
+  compile:
+    - javac:
+        sources: src/com/example/lib/StringUtils.java
+        destination: build/classes
 ```
-
-Compiles Java source files to a destination directory.
 
 ### 3. Classpath Management
 
-```typescript
-JavacTask.of({
-  sources: "app/src/com/example/app/Main.java",
-  destination: "app/build/classes",
-  classpath: ["lib/build/string-utils.jar"],
-})
+```yaml
+# app/build.yaml
+dependencies:
+  compile: [lib:jar]
+
+targets:
+  compile:
+    - javac:
+        sources: src/com/example/app/Main.java
+        destination: build/classes
+        classpath:
+          - ../lib/build/string-utils.jar
 ```
 
-The application compilation includes the library JAR on its classpath, allowing it to use library classes.
+The `lib:jar` dependency ensures the library is packaged before app compilation.
 
 ### 4. JAR Packaging
 
-```typescript
-JarTask.of({
-  from: "app/build/classes",
-  to: "app/build/demo-app.jar",
-  mainClass: "com.example.app.Main",
-})
+```yaml
+targets:
+  jar:
+    - jar:
+        from: build/classes
+        to: build/demo-app.jar
+        mainClass: com.example.app.Main
 ```
-
-Packages compiled classes into a JAR file with a Main-Class manifest entry.
 
 ### 5. Running Java Applications
 
-```typescript
-JavaTask.of({
-  mainClass: "com.example.app.Main",
-  classpath: ["app/build/classes", "lib/build/string-utils.jar"],
-})
-```
+```yaml
+dependencies:
+  run: [compile]
 
-Runs the application with both the application classes and library JAR on the classpath.
+targets:
+  run:
+    - java:
+        mainClass: com.example.app.Main
+        classpath:
+          - build/classes
+          - ../lib/build/string-utils.jar
+```
 
 ### 6. Target Dependencies
 
-```typescript
-const appCompile = app.target({
-  name: "compile",
-  dependsOn: [libJar],  // Cross-project target reference
-  tasks: [...],
-});
+```yaml
+dependencies:
+  compile: [lib:jar]
+  jar: [compile]
+  run: [compile]
+
+clean: [compile, jar]
 ```
 
-Target dependencies ensure proper build order:
-- `appCompile` depends on `libJar`, guaranteeing the library is built first
-- Cross-project dependencies are handled automatically
+Cross-project references (`lib:jar`) and local ordering (`jar` after `compile`) are declared in one place.
 
 ## Expected Output
 
@@ -205,11 +217,11 @@ This example teaches you:
 1. **How to structure multi-project builds** in Worklift
 2. **How to manage dependencies** between Java projects
 3. **How to handle classpath** for compilation and execution
-4. **How to use built-in Java tasks**:
-   - `JavacTask` for compilation
-   - `JarTask` for packaging
-   - `JavaTask` for execution
-   - `DeleteTask` for cleanup
+4. **How to use built-in Java tasks** in YAML:
+   - `javac` for compilation
+   - `jar` for packaging
+   - `java` for execution
+   - top-level `clean` for cleanup
 5. **How to create a complete build lifecycle** from source to execution
 
 ## Next Steps
