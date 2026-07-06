@@ -3,10 +3,12 @@ import {
   Artifact,
   ExternalCommandError,
   FileSet,
-  type ClasspathElement,
+} from "@worklift/core";
+import {
   registerClasspathElements,
   resolveClasspathPaths,
-} from "@worklift/core";
+  type ClasspathElement,
+} from "./classpath.ts";
 import { spawn } from "child_process";
 import { mkdir } from "fs/promises";
 import { delimiter } from "path";

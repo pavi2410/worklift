@@ -38,9 +38,9 @@ export abstract class Task {
   readonly outputArtifacts: Artifact<unknown>[] = [];
 
   /**
-   * Targets referenced on the classpath whose outputs this task consumes.
+   * Targets referenced via output refs whose outputs this task consumes.
    */
-  private readonly classpathTargetDependencies: Target[] = [];
+  private readonly outputTargetDependencies: Target[] = [];
 
   /**
    * Validate that all required parameters are set.
@@ -213,14 +213,14 @@ export abstract class Task {
   }
 
   /**
-   * Targets referenced via classpath (e.g. lib:jar) that must run first.
+   * Targets referenced via output refs (e.g. lib:jar) that must run first.
    */
-  getClasspathTargetDependencies(): readonly Target[] {
-    return this.classpathTargetDependencies;
+  getOutputTargetDependencies(): readonly Target[] {
+    return this.outputTargetDependencies;
   }
 
-  /** @internal Used by classpath helpers */
-  registerClasspathTargetDependency(target: Target): void {
-    this.classpathTargetDependencies.push(target);
+  /** @internal Used by JVM classpath helpers */
+  registerOutputTargetDependency(target: Target): void {
+    this.outputTargetDependencies.push(target);
   }
 }

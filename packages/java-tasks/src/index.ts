@@ -4,7 +4,11 @@
 
 // Tasks
 export { JavacTask } from "./JavacTask.ts";
-export type { ClasspathElement } from "./JavacTask.ts";
+export {
+  type ClasspathElement,
+  registerClasspathElements,
+  resolveClasspathPaths,
+} from "./classpath.ts";
 export { JarTask } from "./JarTask.ts";
 export { WarTask } from "./WarTask.ts";
 export { JavaTask } from "./JavaTask.ts";

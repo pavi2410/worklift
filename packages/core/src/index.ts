@@ -12,9 +12,6 @@ export { Logger, LogLevel, LogFormat, type LoggerOptions } from "./logging/index
 export { getProjectRegistry } from "./types.ts";
 export { ExternalCommandError } from "./errors.ts";
 export {
-  type ClasspathElement,
   isTarget,
   collectTargetOutputs,
-  registerClasspathElements,
-  resolveClasspathPaths,
-} from "./classpath.ts";
+} from "./targetOutputs.ts";

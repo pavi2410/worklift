@@ -1,13 +1,11 @@
-import {
-  Task,
-  Artifact,
-  ExternalCommandError,
-  type ClasspathElement,
-  registerClasspathElements,
-  resolveClasspathPaths,
-} from "@worklift/core";
+import { Task, Artifact, ExternalCommandError } from "@worklift/core";
 import { spawn } from "child_process";
 import { delimiter } from "path";
+import {
+  registerClasspathElements,
+  resolveClasspathPaths,
+  type ClasspathElement,
+} from "./classpath.ts";
 
 export type { ClasspathElement };
 

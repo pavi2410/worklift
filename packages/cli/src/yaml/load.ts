@@ -114,7 +114,7 @@ export async function loadYamlBuild(
     const target = proj.target({ name: targetName, tasks });
 
     for (const task of tasks) {
-      for (const dep of task.getClasspathTargetDependencies()) {
+      for (const dep of task.getOutputTargetDependencies()) {
         if (!hasTargetDependency(target, dep)) {
           target.dependencies.push(dep);
         }

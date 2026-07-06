@@ -1,7 +1,11 @@
-import type { Target } from "./types.ts";
-import { Artifact } from "./Artifact.ts";
-import { FileSet } from "./FileSet.ts";
-import type { Task } from "./Task.ts";
+import {
+  Artifact,
+  FileSet,
+  collectTargetOutputs,
+  isTarget,
+  type Target,
+  type Task,
+} from "@worklift/core";
 
 export type ClasspathElement =
   | string
@@ -9,29 +13,6 @@ export type ClasspathElement =
   | Artifact<string[]>
   | FileSet
   | Target;
-
-export function isTarget(value: unknown): value is Target {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "name" in value &&
-    "taskList" in value &&
-    Array.isArray((value as Target).taskList)
-  );
-}
-
-/**
- * Collect declared output paths from all tasks in a target.
- */
-export function collectTargetOutputs(target: Target): string[] {
-  const outputs = new Set<string>();
-  for (const task of target.taskList) {
-    for (const output of task.normalizeOutputs()) {
-      outputs.add(output);
-    }
-  }
-  return [...outputs];
-}
 
 /**
  * Register artifact consumers and target output file inputs from classpath elements.
@@ -47,7 +28,7 @@ export function registerClasspathElements(
     if (element instanceof Artifact) {
       task.registerArtifactConsumer(element);
     } else if (isTarget(element)) {
-      task.registerClasspathTargetDependency(element);
+      task.registerOutputTargetDependency(element);
       task.registerFileInputs(collectTargetOutputs(element));
     }
   }
