@@ -1,5 +1,5 @@
 import { readFileSync } from "fs";
-import { dirname, isAbsolute, join, resolve } from "path";
+import { dirname, isAbsolute, join, resolve, basename } from "path";
 import { existsSync } from "fs";
 import {
   Artifact,
@@ -11,6 +11,7 @@ import {
   type Target,
 } from "@worklift/core";
 import { parseTask } from "./parseTask.ts";
+import { parseProjectFromDoc } from "./parseProject.ts";
 import type { YamlBuildFile } from "./types.ts";
 
 const loadedFiles = new Set<string>();
@@ -62,7 +63,13 @@ export async function loadYamlBuild(
     }
   }
 
-  const artifacts = registerArtifacts(doc.artifacts ?? {});
+  const projectDef = parseProjectFromDoc(doc as Record<string, unknown>, absolutePath);
+  if (!projectDef) {
+    logger?.debug(`No project in ${basename(absolutePath)} (imports only)`);
+    return;
+  }
+
+  const artifacts = registerArtifacts(projectDef.artifacts ?? {});
 
   const pendingDeps: Array<{
     target: Target;
@@ -75,45 +82,37 @@ export async function loadYamlBuild(
     targetNames: string[];
   }> = [];
 
-  if (doc.projects) {
-    for (const [projectName, projectDef] of Object.entries(doc.projects)) {
-      const projectBaseDir = projectDef.baseDir
-        ? isAbsolute(projectDef.baseDir)
-          ? projectDef.baseDir
-          : join(baseDir, projectDef.baseDir)
-        : baseDir;
+  const projectBaseDir = projectDef.baseDir
+    ? isAbsolute(projectDef.baseDir)
+      ? projectDef.baseDir
+      : join(baseDir, projectDef.baseDir)
+    : baseDir;
 
-      const proj = project(projectName, projectBaseDir);
+  const proj = project(projectDef.name, projectBaseDir);
 
-      if (projectDef.targets) {
-        for (const [targetName, targetDef] of Object.entries(
-          projectDef.targets
-        )) {
-          if (targetDef.clean) {
-            pendingClean.push({
-              project: proj,
-              targetNames: targetDef.clean,
-            });
-            continue;
-          }
+  if (projectDef.targets) {
+    for (const [targetName, targetDef] of Object.entries(projectDef.targets)) {
+      if (targetDef.clean) {
+        pendingClean.push({
+          project: proj,
+          targetNames: targetDef.clean,
+        });
+        continue;
+      }
 
-          const tasks = (targetDef.tasks ?? []).map((t) =>
-            parseTask(t, artifacts)
-          );
+      const tasks = (targetDef.tasks ?? []).map((t) => parseTask(t, artifacts));
 
-          const target = proj.target({
-            name: targetName,
-            tasks,
-          });
+      const target = proj.target({
+        name: targetName,
+        tasks,
+      });
 
-          if (targetDef.dependsOn?.length) {
-            pendingDeps.push({
-              target,
-              dependsOn: targetDef.dependsOn,
-              projectName,
-            });
-          }
-        }
+      if (targetDef.dependsOn?.length) {
+        pendingDeps.push({
+          target,
+          dependsOn: targetDef.dependsOn,
+          projectName: projectDef.name,
+        });
       }
     }
   }
@@ -121,7 +120,7 @@ export async function loadYamlBuild(
   resolveDependencies(pendingDeps);
   resolveCleanTargets(pendingClean);
 
-  logger?.debug("Build file loaded successfully");
+  logger?.debug(`Loaded project: ${projectDef.name}`);
 }
 
 function registerArtifacts(
@@ -132,7 +131,6 @@ function registerArtifacts(
     const artifact = getOrCreateArtifact(name);
     artifacts.set(name, artifact);
   }
-  // Include all global artifacts so cross-file references work
   for (const [name, artifact] of globalArtifacts) {
     artifacts.set(name, artifact);
   }

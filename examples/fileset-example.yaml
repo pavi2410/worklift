@@ -1,261 +1,261 @@
-projects:
-  fileset-demo:
-    targets:
-      copy-sources:
-        tasks:
-          - copy:
-              files:
-                dir: src
-                include: "**/*.ts"
-                exclude:
-                  - "**/*.test.ts"
-                  - "**/__tests__/**"
-              to: build/src
-          - copy:
-              files:
-                dir: config
-                include:
-                  - "**/*.json"
-                  - "**/*.xml"
-                exclude:
-                  - "**/*-local.*"
-                  - "**/dev/**"
-              to: build/config
+name: fileset-demo
 
-      compile:
-        tasks:
-          - copy:
-              files:
-                dir: src
-                include: "**/*.ts"
-                exclude:
-                  - "**/*.test.ts"
-                  - "**/__tests__/**"
-              to: dist/compiled
-              rename:
-                pattern: "\\.ts$"
-                replacement: ".js"
+targets:
+  copy-sources:
+    tasks:
+      - copy:
+          files:
+            dir: src
+            include: "**/*.ts"
+            exclude:
+              - "**/*.test.ts"
+              - "**/__tests__/**"
+          to: build/src
+      - copy:
+          files:
+            dir: config
+            include:
+              - "**/*.json"
+              - "**/*.xml"
+            exclude:
+              - "**/*-local.*"
+              - "**/dev/**"
+          to: build/config
 
-      flatten:
-        tasks:
-          - copy:
-              files:
-                dir: assets
-                include:
-                  - "**/*.png"
-                  - "**/*.jpg"
-                  - "**/*.svg"
-                  - "**/*.css"
-                exclude:
-                  - "**/raw/**"
-                  - "**/*.psd"
-              to: dist/assets
-              flatten: true
+  compile:
+    tasks:
+      - copy:
+          files:
+            dir: src
+            include: "**/*.ts"
+            exclude:
+              - "**/*.test.ts"
+              - "**/__tests__/**"
+          to: dist/compiled
+          rename:
+            pattern: "\\.ts$"
+            replacement: ".js"
 
-      archive:
-        tasks:
-          - zip:
-              files:
-                dir: src
-                include: "**/*.ts"
-                exclude:
-                  - "**/*.test.ts"
-                  - "**/__tests__/**"
-              to: dist/sources.zip
-          - zip:
-              files:
-                union:
-                  - dir: docs
-                    include: "**/*.md"
-                  - dir: .
-                    include:
-                      - README.md
-                      - LICENSE
-                      - CHANGELOG.md
-              to: dist/docs.zip
-          - copy:
-              files:
-                dir: src
-                include: "**/*.ts"
-                exclude:
-                  - "**/*.test.ts"
-                  - "**/__tests__/**"
-              to: temp/dist/src
-          - copy:
-              files:
-                dir: config
-                include:
-                  - "**/*.json"
-                  - "**/*.xml"
-                exclude:
-                  - "**/*-local.*"
-                  - "**/dev/**"
-              to: temp/dist/config
-          - copy:
-              files:
-                dir: assets
-                include:
-                  - "**/*.png"
-                  - "**/*.jpg"
-                  - "**/*.svg"
-                  - "**/*.css"
-                exclude:
-                  - "**/raw/**"
-                  - "**/*.psd"
-              to: temp/dist/assets
-          - zip:
-              from: temp/dist
-              to: dist/release.zip
-          - delete:
-              paths:
-                - temp
+  flatten:
+    tasks:
+      - copy:
+          files:
+            dir: assets
+            include:
+              - "**/*.png"
+              - "**/*.jpg"
+              - "**/*.svg"
+              - "**/*.css"
+            exclude:
+              - "**/raw/**"
+              - "**/*.psd"
+          to: dist/assets
+          flatten: true
 
-      organize:
-        tasks:
-          - move:
-              files:
-                dir: src
+  archive:
+    tasks:
+      - zip:
+          files:
+            dir: src
+            include: "**/*.ts"
+            exclude:
+              - "**/*.test.ts"
+              - "**/__tests__/**"
+          to: dist/sources.zip
+      - zip:
+          files:
+            union:
+              - dir: docs
+                include: "**/*.md"
+              - dir: .
                 include:
-                  - "**/*.test.ts"
-                  - "**/__tests__/**/*.ts"
-              to: tests
-              flatten: false
+                  - README.md
+                  - LICENSE
+                  - CHANGELOG.md
+          to: dist/docs.zip
+      - copy:
+          files:
+            dir: src
+            include: "**/*.ts"
+            exclude:
+              - "**/*.test.ts"
+              - "**/__tests__/**"
+          to: temp/dist/src
+      - copy:
+          files:
+            dir: config
+            include:
+              - "**/*.json"
+              - "**/*.xml"
+            exclude:
+              - "**/*-local.*"
+              - "**/dev/**"
+          to: temp/dist/config
+      - copy:
+          files:
+            dir: assets
+            include:
+              - "**/*.png"
+              - "**/*.jpg"
+              - "**/*.svg"
+              - "**/*.css"
+            exclude:
+              - "**/raw/**"
+              - "**/*.psd"
+          to: temp/dist/assets
+      - zip:
+          from: temp/dist
+          to: dist/release.zip
+      - delete:
+          paths:
+            - temp
 
-      clean-temp:
-        tasks:
-          - delete:
-              files:
-                dir: build
-                include:
-                  - "**/*.tmp"
-                  - "**/*.log"
-                  - "**/.DS_Store"
-          - delete:
-              files:
-                dir: .
-                include:
-                  - "**/node_modules/**/.cache/**"
-                  - "**/dist/**/*.map"
+  organize:
+    tasks:
+      - move:
+          files:
+            dir: src
+            include:
+              - "**/*.test.ts"
+              - "**/__tests__/**/*.ts"
+          to: tests
+          flatten: false
 
-      production:
-        dependsOn:
-          - clean-temp
-        tasks:
-          - copy:
-              files:
-                dir: src
-                include: "**/*.ts"
-                exclude:
-                  - "**/*.test.ts"
-                  - "**/__tests__/**"
-              to: dist/app
-              rename:
-                pattern: "\\.ts$"
-                replacement: ".js"
-          - copy:
-              files:
-                dir: config
-                include: "**/*.json"
-                exclude:
-                  - "**/*-dev.*"
-                  - "**/*-test.*"
-              to: dist/config
-          - copy:
-              files:
-                dir: assets
-                include:
-                  - "**/*.png"
-                  - "**/*.jpg"
-                  - "**/*.svg"
-                  - "**/*.css"
-                exclude:
-                  - "**/raw/**"
-                  - "**/*.psd"
-              to: dist/assets
-          - zip:
-              from: dist
-              to: releases/app-v1.0.0.zip
+  clean-temp:
+    tasks:
+      - delete:
+          files:
+            dir: build
+            include:
+              - "**/*.tmp"
+              - "**/*.log"
+              - "**/.DS_Store"
+      - delete:
+          files:
+            dir: .
+            include:
+              - "**/node_modules/**/.cache/**"
+              - "**/dist/**/*.map"
 
-      selective:
-        tasks:
-          - copy:
-              files:
-                dir: src
+  production:
+    dependsOn:
+      - clean-temp
+    tasks:
+      - copy:
+          files:
+            dir: src
+            include: "**/*.ts"
+            exclude:
+              - "**/*.test.ts"
+              - "**/__tests__/**"
+          to: dist/app
+          rename:
+            pattern: "\\.ts$"
+            replacement: ".js"
+      - copy:
+          files:
+            dir: config
+            include: "**/*.json"
+            exclude:
+              - "**/*-dev.*"
+              - "**/*-test.*"
+          to: dist/config
+      - copy:
+          files:
+            dir: assets
+            include:
+              - "**/*.png"
+              - "**/*.jpg"
+              - "**/*.svg"
+              - "**/*.css"
+            exclude:
+              - "**/raw/**"
+              - "**/*.psd"
+          to: dist/assets
+      - zip:
+          from: dist
+          to: releases/app-v1.0.0.zip
+
+  selective:
+    tasks:
+      - copy:
+          files:
+            dir: src
+            include:
+              - "**/*.ts"
+              - "**/*.tsx"
+              - "**/*.css"
+            exclude:
+              - "**/node_modules/**"
+              - "**/*.test.*"
+              - "**/coverage/**"
+              - "**/__mocks__/**"
+          to: dist/app
+
+  combine:
+    tasks:
+      - copy:
+          files:
+            union:
+              - dir: frontend/src
                 include:
                   - "**/*.ts"
                   - "**/*.tsx"
-                  - "**/*.css"
-                exclude:
-                  - "**/node_modules/**"
-                  - "**/*.test.*"
-                  - "**/coverage/**"
-                  - "**/__mocks__/**"
-              to: dist/app
+              - dir: backend/src
+                include: "**/*.ts"
+              - dir: shared/lib
+                include: "**/*.ts"
+          to: dist/all-sources
+          rename:
+            pattern: "\\.tsx?$"
+            replacement: ".js"
 
-      combine:
-        tasks:
-          - copy:
-              files:
-                union:
-                  - dir: frontend/src
-                    include:
-                      - "**/*.ts"
-                      - "**/*.tsx"
-                  - dir: backend/src
-                    include: "**/*.ts"
-                  - dir: shared/lib
-                    include: "**/*.ts"
-              to: dist/all-sources
-              rename:
-                pattern: "\\.tsx?$"
-                replacement: ".js"
-
-      deploy-webapp:
-        tasks:
-          - copy:
-              files:
-                dir: src
-                include:
-                  - "**/*.ts"
-                  - "**/*.tsx"
-                exclude:
-                  - "**/*.test.*"
-                  - "**/__tests__/**"
-              to: deploy/app
-              rename:
-                pattern: "\\.tsx?$"
-                replacement: ".js"
-          - copy:
-              files:
-                dir: public
-                include:
-                  - "**/*.png"
-                  - "**/*.jpg"
-                  - "**/*.svg"
-                  - "**/*.webp"
-                exclude:
-                  - "**/original/**"
-                  - "**/*.psd"
-              to: deploy/assets
-              flatten: true
-          - copy:
-              files:
-                dir: config
-                include:
-                  - "**/*.json"
-                  - "**/*.env.production"
-                exclude:
-                  - "**/*.dev.*"
-                  - "**/*.local.*"
-              to: deploy/config
-          - copy:
-              files:
-                dir: templates
-                include: "**/*.html"
-              to: deploy/templates
-          - zip:
-              from: deploy
-              to: releases/webapp-deploy.zip
-          - delete:
-              paths:
-                - deploy
+  deploy-webapp:
+    tasks:
+      - copy:
+          files:
+            dir: src
+            include:
+              - "**/*.ts"
+              - "**/*.tsx"
+            exclude:
+              - "**/*.test.*"
+              - "**/__tests__/**"
+          to: deploy/app
+          rename:
+            pattern: "\\.tsx?$"
+            replacement: ".js"
+      - copy:
+          files:
+            dir: public
+            include:
+              - "**/*.png"
+              - "**/*.jpg"
+              - "**/*.svg"
+              - "**/*.webp"
+            exclude:
+              - "**/original/**"
+              - "**/*.psd"
+          to: deploy/assets
+          flatten: true
+      - copy:
+          files:
+            dir: config
+            include:
+              - "**/*.json"
+              - "**/*.env.production"
+            exclude:
+              - "**/*.dev.*"
+              - "**/*.local.*"
+          to: deploy/config
+      - copy:
+          files:
+            dir: templates
+            include: "**/*.html"
+          to: deploy/templates
+      - zip:
+          from: deploy
+          to: releases/webapp-deploy.zip
+      - delete:
+          paths:
+            - deploy

@@ -22,21 +22,19 @@ describe("loadYamlBuild", () => {
 
   test("loads a project with targets and tasks", async () => {
     const file = writeBuild(
-      "build.yaml",
+      "app/build.yaml",
       `
-projects:
-  app:
-    targets:
-      init:
-        tasks:
-          - mkdir:
-              paths: [build]
-      build:
-        dependsOn: [init]
-        tasks:
-          - copy:
-              from: README.md
-              to: build/
+targets:
+  init:
+    tasks:
+      - mkdir:
+          paths: [build]
+  build:
+    dependsOn: [init]
+    tasks:
+      - copy:
+          from: README.md
+          to: build/
 `
     );
 
@@ -53,29 +51,25 @@ projects:
     writeBuild(
       "lib/build.yaml",
       `
-projects:
-  lib:
-    targets:
-      jar:
-        tasks:
-          - mkdir:
-              paths: [build]
+targets:
+  jar:
+    tasks:
+      - mkdir:
+          paths: [build]
 `
     );
 
     const root = writeBuild(
-      "build.yaml",
+      "app/build.yaml",
       `
 imports:
-  - ./lib/build.yaml
-projects:
-  app:
-    targets:
-      build:
-        dependsOn: [lib:jar]
-        tasks:
-          - mkdir:
-              paths: [dist]
+  - ../lib/build.yaml
+targets:
+  build:
+    dependsOn: [lib:jar]
+    tasks:
+      - mkdir:
+          paths: [dist]
 `
     );
 
@@ -93,31 +87,27 @@ projects:
       `
 artifacts:
   deps: {}
-projects:
-  lib:
-    targets:
-      resolve:
-        tasks:
-          - maven-dep:
-              coordinates: [org.json:json:20230227]
-              into: $deps
+targets:
+  resolve:
+    tasks:
+      - maven-dep:
+          coordinates: [org.json:json:20230227]
+          into: $deps
 `
     );
 
     const root = writeBuild(
-      "build.yaml",
+      "app/build.yaml",
       `
 imports:
-  - ./lib/build.yaml
-projects:
-  app:
-    targets:
-      compile:
-        tasks:
-          - javac:
-              sources: src/Main.java
-              destination: build/classes
-              classpath: [$deps]
+  - ../lib/build.yaml
+targets:
+  compile:
+    tasks:
+      - javac:
+          sources: src/Main.java
+          destination: build/classes
+          classpath: [$deps]
 `
     );
 
@@ -129,17 +119,15 @@ projects:
 
   test("creates clean targets", async () => {
     const file = writeBuild(
-      "build.yaml",
+      "app/build.yaml",
       `
-projects:
-  app:
-    targets:
-      compile:
-        tasks:
-          - mkdir:
-              paths: [build]
-      clean:
-        clean: [compile]
+targets:
+  compile:
+    tasks:
+      - mkdir:
+          paths: [build]
+  clean:
+    clean: [compile]
 `
     );
 
@@ -151,15 +139,14 @@ projects:
 
   test("deduplicates imported files", async () => {
     writeBuild(
-      "shared.yaml",
+      "lib.yaml",
       `
-projects:
-  lib:
-    targets:
-      build:
-        tasks:
-          - mkdir:
-              paths: [build]
+name: lib
+targets:
+  build:
+    tasks:
+      - mkdir:
+          paths: [build]
 `
     );
 
@@ -167,8 +154,8 @@ projects:
       "build.yaml",
       `
 imports:
-  - ./shared.yaml
-  - ./shared.yaml
+  - ./lib.yaml
+  - ./lib.yaml
 `
     );
 

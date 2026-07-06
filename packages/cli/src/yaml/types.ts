@@ -1,20 +1,19 @@
 /**
  * YAML build file schema types
+ *
+ * One file defines one project using a flat layout.
  */
 
 export interface YamlBuildFile {
   imports?: string[];
+  name?: string;
+  baseDir?: string;
   artifacts?: Record<string, YamlArtifactDef>;
-  projects?: Record<string, YamlProjectDef>;
+  targets?: Record<string, YamlTargetDef>;
 }
 
 export interface YamlArtifactDef {
   default?: unknown;
-}
-
-export interface YamlProjectDef {
-  baseDir?: string;
-  targets?: Record<string, YamlTargetDef>;
 }
 
 export interface YamlTargetDef {
@@ -31,4 +30,11 @@ export interface YamlFileSetDef {
   include?: string | string[];
   exclude?: string | string[];
   union?: YamlFileSetDef[];
+}
+
+export interface ParsedProjectDef {
+  name: string;
+  baseDir?: string;
+  artifacts?: Record<string, YamlArtifactDef>;
+  targets?: Record<string, YamlTargetDef>;
 }

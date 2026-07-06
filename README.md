@@ -78,16 +78,22 @@ Instead of XML like Apache Ant:
 You can write YAML:
 
 ```yaml
-projects:
-  app:
-    targets:
-      build:
-        tasks:
-          - javac:
-              sources: src/**/*.java
-              destination: build/classes
-              sourceVersion: "11"
-              targetVersion: "11"
+targets:
+  build:
+    tasks:
+      - javac:
+          sources: src/**/*.java
+          destination: build/classes
+          sourceVersion: "11"
+          targetVersion: "11"
+```
+
+Each build file defines **one project**. The project name defaults to the containing directory for `build.yaml`, or the filename otherwise. Override with `name:`:
+
+```yaml
+name: my-app
+targets:
+  build: ...
 ```
 
 ### Multi-module projects
@@ -102,32 +108,28 @@ imports:
 ```
 
 ```yaml
-# lib/build.yaml
-projects:
-  lib:
-    targets:
-      jar:
-        tasks:
-          - javac:
-              sources: src/**/*.java
-              destination: build/classes
-          - jar:
-              from: build/classes
-              to: build/lib.jar
+# lib/build.yaml  (project name: lib)
+targets:
+  jar:
+    tasks:
+      - javac:
+          sources: src/**/*.java
+          destination: build/classes
+      - jar:
+          from: build/classes
+          to: build/lib.jar
 ```
 
 ```yaml
-# app/build.yaml
-projects:
-  app:
-    targets:
-      build:
-        dependsOn: [lib:jar]
-        tasks:
-          - javac:
-              sources: src/**/*.java
-              destination: build/classes
-              classpath: [../lib/build/lib.jar]
+# app/build.yaml  (project name: app)
+targets:
+  build:
+    dependsOn: [lib:jar]
+    tasks:
+      - javac:
+          sources: src/**/*.java
+          destination: build/classes
+          classpath: [../lib/build/lib.jar]
 ```
 
 ## Build File Reference
@@ -138,18 +140,17 @@ projects:
 imports:           # Optional: other build.yaml files to load
   - ./module/build.yaml
 
+name: my-project   # Optional: defaults to dir name (build.yaml) or filename
+baseDir: .         # Optional: defaults to the build file's directory
 artifacts:         # Optional: named values passed between tasks
   classpath: {}
 
-projects:
-  my-project:
-    baseDir: .     # Optional: defaults to the build file's directory
-    targets:
-      target-name:
-        dependsOn: [other-target, other-project:target]
-        tasks:
-          - task-type:
-              option: value
+targets:
+  target-name:
+    dependsOn: [other-target, other-project:target]
+    tasks:
+      - task-type:
+          option: value
 ```
 
 ### Artifacts
@@ -160,22 +161,20 @@ Artifacts pass data (such as resolved Maven JAR paths) between tasks. Reference 
 artifacts:
   compileClasspath: {}
 
-projects:
-  my-app:
-    targets:
-      resolve-deps:
-        tasks:
-          - maven-dep:
-              coordinates:
-                - org.json:json:20230227
-              into: $compileClasspath
+targets:
+  resolve-deps:
+    tasks:
+      - maven-dep:
+          coordinates:
+            - org.json:json:20230227
+          into: $compileClasspath
 
-      compile:
-        tasks:
-          - javac:
-              sources: src/**/*.java
-              destination: build/classes
-              classpath: [$compileClasspath]
+  compile:
+    tasks:
+      - javac:
+          sources: src/**/*.java
+          destination: build/classes
+          classpath: [$compileClasspath]
 ```
 
 The scheduler runs `resolve-deps` before `compile` automatically.
