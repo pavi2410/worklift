@@ -7,53 +7,41 @@ dependencies:
   jar: [compile]
   build: [jar, test]
 
+clean: [compile, compile-tests, test, jar]
+
 targets:
   resolve-deps:
-    tasks:
-      - maven-dep:
-          preset: junit5
-          into: $junitClasspath
+    - maven-dep:
+        preset: junit5
+        into: $junitClasspath
 
   compile:
-    tasks:
-      - javac:
-          sources: src/main/java/com/example/utils/StringUtils.java
-          destination: build/classes
-          sourceVersion: "11"
-          targetVersion: "11"
+    - javac:
+        sources: src/main/java/com/example/utils/StringUtils.java
+        destination: build/classes
+        sourceVersion: "11"
+        targetVersion: "11"
 
   compile-tests:
-    tasks:
-      - javac:
-          sources: src/test/java/com/example/utils/StringUtilsTest.java
-          destination: build/test-classes
-          classpath:
-            - $junitClasspath
-            - build/classes
-          sourceVersion: "11"
-          targetVersion: "11"
+    - javac:
+        sources: src/test/java/com/example/utils/StringUtilsTest.java
+        destination: build/test-classes
+        classpath:
+          - $junitClasspath
+          - build/classes
+        sourceVersion: "11"
+        targetVersion: "11"
 
   test:
-    tasks:
-      - junit:
-          testClasses: build/test-classes
-          classpath:
-            - $junitClasspath
-            - build/classes
-          reports: build/reports
-          version: 5
+    - junit:
+        testClasses: build/test-classes
+        classpath:
+          - $junitClasspath
+          - build/classes
+        reports: build/reports
+        version: 5
 
   jar:
-    tasks:
-      - jar:
-          from: build/classes
-          to: build/libs/string-utils.jar
-
-  build: {}
-
-  clean:
-    clean:
-      - compile
-      - compile-tests
-      - test
-      - jar
+    - jar:
+        from: build/classes
+        to: build/libs/string-utils.jar

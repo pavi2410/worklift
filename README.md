@@ -80,12 +80,11 @@ You can write YAML:
 ```yaml
 targets:
   build:
-    tasks:
-      - javac:
-          sources: src/**/*.java
-          destination: build/classes
-          sourceVersion: "11"
-          targetVersion: "11"
+    - javac:
+        sources: src/**/*.java
+        destination: build/classes
+        sourceVersion: "11"
+        targetVersion: "11"
 ```
 
 Each build file defines **one project**. The project name defaults to the containing directory for `build.yaml`, or the filename otherwise. Override with `name:`:
@@ -111,13 +110,12 @@ imports:
 # lib/build.yaml  (project name: lib)
 targets:
   jar:
-    tasks:
-      - javac:
-          sources: src/**/*.java
-          destination: build/classes
-      - jar:
-          from: build/classes
-          to: build/lib.jar
+    - javac:
+        sources: src/**/*.java
+        destination: build/classes
+    - jar:
+        from: build/classes
+        to: build/lib.jar
 ```
 
 ```yaml
@@ -126,11 +124,10 @@ dependencies:
   build: [lib:jar]
 targets:
   build:
-    tasks:
-      - javac:
-          sources: src/**/*.java
-          destination: build/classes
-          classpath: [../lib/build/lib.jar]
+    - javac:
+        sources: src/**/*.java
+        destination: build/classes
+        classpath: [../lib/build/lib.jar]
 ```
 
 ## Build File Reference
@@ -150,11 +147,12 @@ dependencies:      # Optional: target dependency graph
   build: [compile, package]
   package: [compile]
 
+clean: [compile, package]   # Optional: targets whose outputs to delete
+
 targets:
   target-name:
-    tasks:
-      - task-type:
-          option: value
+    - task-type:
+        option: value
 ```
 
 ### Artifacts
@@ -167,18 +165,16 @@ artifacts:
 
 targets:
   resolve-deps:
-    tasks:
-      - maven-dep:
-          coordinates:
-            - org.json:json:20230227
-          into: $compileClasspath
+    - maven-dep:
+        coordinates:
+          - org.json:json:20230227
+        into: $compileClasspath
 
   compile:
-    tasks:
-      - javac:
-          sources: src/**/*.java
-          destination: build/classes
-          classpath: [$compileClasspath]
+    - javac:
+        sources: src/**/*.java
+        destination: build/classes
+        classpath: [$compileClasspath]
 ```
 
 The scheduler runs `resolve-deps` before `compile` automatically.
@@ -198,9 +194,19 @@ Cross-project references use `project:target` syntax (e.g. `lib:jar`).
 
 ### Clean targets
 
+Declare outputs to delete with a top-level `clean` list. Targets listed in `dependencies` without a body are created automatically.
+
 ```yaml
-clean:
-  clean: [compile, jar, test]
+dependencies:
+  build: [jar, test]
+
+clean: [compile, jar, test]
+
+targets:
+  compile:
+    - javac: ...
+  jar:
+    - jar: ...
 ```
 
 ### Available tasks

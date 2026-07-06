@@ -28,14 +28,12 @@ dependencies:
   build: [init]
 targets:
   init:
-    tasks:
-      - mkdir:
-          paths: [build]
+    - mkdir:
+        paths: [build]
   build:
-    tasks:
-      - copy:
-          from: README.md
-          to: build/
+    - copy:
+        from: README.md
+        to: build/
 `
     );
 
@@ -48,15 +46,37 @@ targets:
     expect(app!.targets.get("build")!.dependencies).toEqual(["init"]);
   });
 
+  test("auto-creates dependency-only targets", async () => {
+    const file = writeBuild(
+      "app/build.yaml",
+      `
+dependencies:
+  build: [jar, test]
+targets:
+  jar:
+    - mkdir:
+        paths: [build/jar]
+  test:
+    - mkdir:
+        paths: [build/test]
+`
+    );
+
+    await loadYamlBuild(file);
+
+    const build = getProjectRegistry().get("app")!.targets.get("build")!;
+    expect(build.taskList).toHaveLength(0);
+    expect(build.dependencies).toHaveLength(2);
+  });
+
   test("resolves cross-project dependencies", async () => {
     writeBuild(
       "lib/build.yaml",
       `
 targets:
   jar:
-    tasks:
-      - mkdir:
-          paths: [build]
+    - mkdir:
+        paths: [build]
 `
     );
 
@@ -69,9 +89,8 @@ dependencies:
   build: [lib:jar]
 targets:
   build:
-    tasks:
-      - mkdir:
-          paths: [dist]
+    - mkdir:
+        paths: [dist]
 `
     );
 
@@ -91,10 +110,9 @@ artifacts:
   deps: {}
 targets:
   resolve:
-    tasks:
-      - maven-dep:
-          coordinates: [org.json:json:20230227]
-          into: $deps
+    - maven-dep:
+        coordinates: [org.json:json:20230227]
+        into: $deps
 `
     );
 
@@ -105,11 +123,10 @@ imports:
   - ../lib/build.yaml
 targets:
   compile:
-    tasks:
-      - javac:
-          sources: src/Main.java
-          destination: build/classes
-          classpath: [$deps]
+    - javac:
+        sources: src/Main.java
+        destination: build/classes
+        classpath: [$deps]
 `
     );
 
@@ -119,17 +136,15 @@ targets:
     expect(compile.taskList).toHaveLength(1);
   });
 
-  test("creates clean targets", async () => {
+  test("creates clean target from top-level clean", async () => {
     const file = writeBuild(
       "app/build.yaml",
       `
+clean: [compile]
 targets:
   compile:
-    tasks:
-      - mkdir:
-          paths: [build]
-  clean:
-    clean: [compile]
+    - mkdir:
+        paths: [build]
 `
     );
 
@@ -146,9 +161,8 @@ targets:
 name: lib
 targets:
   build:
-    tasks:
-      - mkdir:
-          paths: [build]
+    - mkdir:
+        paths: [build]
 `
     );
 
@@ -165,22 +179,33 @@ imports:
     expect(getProjectRegistry().size).toBe(1);
   });
 
-  test("rejects dependencies for unknown targets", async () => {
+  test("rejects unknown dependency references", async () => {
     const file = writeBuild(
       "app/build.yaml",
       `
 dependencies:
-  missing: [init]
+  build: [other:missing]
 targets:
-  init:
-    tasks:
-      - mkdir:
-          paths: [build]
+  build:
+    - mkdir:
+        paths: [build]
 `
     );
 
-    await expect(loadYamlBuild(file)).rejects.toThrow(
-      "Dependency target not found"
+    await expect(loadYamlBuild(file)).rejects.toThrow("Dependency not found");
+  });
+
+  test("rejects target named clean", async () => {
+    const file = writeBuild(
+      "app/build.yaml",
+      `
+targets:
+  clean:
+    - mkdir:
+        paths: [build]
+`
     );
+
+    await expect(loadYamlBuild(file)).rejects.toThrow('reserved');
   });
 });

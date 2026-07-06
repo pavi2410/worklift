@@ -1,20 +1,15 @@
 dependencies:
   jar: [compile]
 
+clean: [compile, jar]
+
 targets:
   compile:
-    tasks:
-      - javac:
-          sources: src/com/example/lib/StringUtils.java
-          destination: build/classes
+    - javac:
+        sources: src/com/example/lib/StringUtils.java
+        destination: build/classes
 
   jar:
-    tasks:
-      - jar:
-          from: build/classes
-          to: build/string-utils.jar
-
-  clean:
-    clean:
-      - compile
-      - jar
+    - jar:
+        from: build/classes
+        to: build/string-utils.jar

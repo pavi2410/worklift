@@ -18,6 +18,7 @@ export function parseProjectFromDoc(
     baseDir: doc.baseDir as string | undefined,
     artifacts: doc.artifacts as ParsedProjectDef["artifacts"],
     dependencies: doc.dependencies as ParsedProjectDef["dependencies"],
+    clean: doc.clean as ParsedProjectDef["clean"],
     targets: doc.targets as ParsedProjectDef["targets"],
   };
 }

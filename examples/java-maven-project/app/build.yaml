@@ -9,71 +9,58 @@ dependencies:
   build: [jar, test]
   run: [compile]
 
+clean: [compile, compile-tests, test, jar]
+
 targets:
   resolve-deps:
-    tasks:
-      - maven-dep:
-          coordinates:
-            - org.json:json:20230227
-          into: $appDependencies
+    - maven-dep:
+        coordinates:
+          - org.json:json:20230227
+        into: $appDependencies
 
   compile:
-    tasks:
-      - javac:
-          sources: src/main/java/com/example/app/Application.java
-          destination: build/classes
-          classpath:
-            - $appDependencies
-            - ../string-utils/build/libs/string-utils.jar
-          sourceVersion: "11"
-          targetVersion: "11"
+    - javac:
+        sources: src/main/java/com/example/app/Application.java
+        destination: build/classes
+        classpath:
+          - $appDependencies
+          - ../string-utils/build/libs/string-utils.jar
+        sourceVersion: "11"
+        targetVersion: "11"
 
   compile-tests:
-    tasks:
-      - javac:
-          sources: src/test/java/com/example/app/ApplicationTest.java
-          destination: build/test-classes
-          classpath:
-            - $junitClasspath
-            - $appDependencies
-            - ../string-utils/build/libs/string-utils.jar
-            - build/classes
-          sourceVersion: "11"
-          targetVersion: "11"
+    - javac:
+        sources: src/test/java/com/example/app/ApplicationTest.java
+        destination: build/test-classes
+        classpath:
+          - $junitClasspath
+          - $appDependencies
+          - ../string-utils/build/libs/string-utils.jar
+          - build/classes
+        sourceVersion: "11"
+        targetVersion: "11"
 
   test:
-    tasks:
-      - junit:
-          testClasses: build/test-classes
-          classpath:
-            - $junitClasspath
-            - $appDependencies
-            - ../string-utils/build/libs/string-utils.jar
-            - build/classes
-          reports: build/reports
-          version: 5
+    - junit:
+        testClasses: build/test-classes
+        classpath:
+          - $junitClasspath
+          - $appDependencies
+          - ../string-utils/build/libs/string-utils.jar
+          - build/classes
+        reports: build/reports
+        version: 5
 
   jar:
-    tasks:
-      - jar:
-          from: build/classes
-          to: build/libs/app.jar
-          mainClass: com.example.app.Application
-
-  build: {}
+    - jar:
+        from: build/classes
+        to: build/libs/app.jar
+        mainClass: com.example.app.Application
 
   run:
-    tasks:
-      - java:
-          mainClass: com.example.app.Application
-          classpath:
-            - $appDependencies
-            - ../string-utils/build/libs/string-utils.jar
-            - build/classes
-
-  clean:
-    clean:
-      - compile
-      - compile-tests
-      - test
-      - jar
+    - java:
+        mainClass: com.example.app.Application
+        classpath:
+          - $appDependencies
+          - ../string-utils/build/libs/string-utils.jar
+          - build/classes

@@ -11,72 +11,59 @@ dependencies:
   run: [compile-src]
   build: [compile-src, compile-test]
 
+clean: [prepare, compile-src, compile-test]
+
 targets:
   prepare:
-    tasks:
-      - mkdir:
-          paths:
-            - build/classes
-            - build/test-classes
+    - mkdir:
+        paths:
+          - build/classes
+          - build/test-classes
 
   resolve-deps-for-compile:
-    tasks:
-      - maven-dep:
-          coordinates:
-            - org.json:json:20230227
-            - com.google.guava:guava:31.1-jre
-          into: $compileClasspath
+    - maven-dep:
+        coordinates:
+          - org.json:json:20230227
+          - com.google.guava:guava:31.1-jre
+        into: $compileClasspath
 
   resolve-deps-for-test:
-    tasks:
-      - maven-dep:
-          coordinates:
-            - commons-lang:commons-lang:2.6
-            - junit:junit:4.13.2
-          into: $testClasspath
+    - maven-dep:
+        coordinates:
+          - commons-lang:commons-lang:2.6
+          - junit:junit:4.13.2
+        into: $testClasspath
 
   compile-src:
-    tasks:
-      - javac:
-          sources: src/**/*.java
-          destination: build/classes
-          classpath:
-            - $compileClasspath
+    - javac:
+        sources: src/**/*.java
+        destination: build/classes
+        classpath:
+          - $compileClasspath
 
   compile-test:
-    tasks:
-      - javac:
-          sources: test/**/*.java
-          destination: build/test-classes
-          classpath:
-            - $compileClasspath
-            - $testClasspath
-            - build/classes
+    - javac:
+        sources: test/**/*.java
+        destination: build/test-classes
+        classpath:
+          - $compileClasspath
+          - $testClasspath
+          - build/classes
 
   test:
-    tasks:
-      - java:
-          mainClass: com.example.TestRunner
-          classpath:
-            - $compileClasspath
-            - $testClasspath
-            - build/classes
-            - build/test-classes
-          args:
-            - --verbose
+    - java:
+        mainClass: com.example.TestRunner
+        classpath:
+          - $compileClasspath
+          - $testClasspath
+          - build/classes
+          - build/test-classes
+        args:
+          - --verbose
 
   run:
-    tasks:
-      - java:
-          mainClass: com.example.Main
-          classpath:
-            - $compileClasspath
-            - build/classes
-
-  build: {}
-
-  clean:
-    clean:
-      - prepare
-      - compile-src
-      - compile-test
+    - java:
+        mainClass: com.example.Main
+        classpath:
+          - $compileClasspath
+          - build/classes

@@ -10,12 +10,14 @@ import {
   type Project,
   type Target,
 } from "@worklift/core";
-import { parseTask } from "./parseTask.ts";
+import { parseTargetTasks } from "./parseTarget.ts";
 import { parseProjectFromDoc } from "./parseProject.ts";
 import type { YamlBuildFile } from "./types.ts";
 
 const loadedFiles = new Set<string>();
 const globalArtifacts = new Map<string, Artifact<string[]>>();
+
+const RESERVED_TARGET_NAMES = new Set(["clean"]);
 
 function getOrCreateArtifact(name: string): Artifact<string[]> {
   let artifact = globalArtifacts.get(name);
@@ -77,11 +79,6 @@ export async function loadYamlBuild(
     projectName: string;
   }> = [];
 
-  const pendingClean: Array<{
-    project: Project;
-    targetNames: string[];
-  }> = [];
-
   const projectBaseDir = projectDef.baseDir
     ? isAbsolute(projectDef.baseDir)
       ? projectDef.baseDir
@@ -90,22 +87,25 @@ export async function loadYamlBuild(
 
   const proj = project(projectDef.name, projectBaseDir);
 
-  if (projectDef.targets) {
-    for (const [targetName, targetDef] of Object.entries(projectDef.targets)) {
-      if (targetDef.clean) {
-        pendingClean.push({
-          project: proj,
-          targetNames: targetDef.clean,
-        });
-        continue;
-      }
+  const targetDefs = projectDef.targets ?? {};
+  const dependencyKeys = Object.keys(projectDef.dependencies ?? {});
 
-      const tasks = (targetDef.tasks ?? []).map((t) => parseTask(t, artifacts));
+  for (const name of [...Object.keys(targetDefs), ...dependencyKeys]) {
+    if (RESERVED_TARGET_NAMES.has(name)) {
+      throw new Error(
+        `Target name "${name}" is reserved. Use top-level clean: for clean targets.`
+      );
+    }
+  }
 
-      const target = proj.target({
-        name: targetName,
-        tasks,
-      });
+  for (const [targetName, targetDef] of Object.entries(targetDefs)) {
+    const tasks = parseTargetTasks(targetDef, targetName, artifacts);
+    proj.target({ name: targetName, tasks });
+  }
+
+  for (const targetName of dependencyKeys) {
+    if (!proj.targets.has(targetName)) {
+      proj.target({ name: targetName, tasks: [] });
     }
   }
 
@@ -127,7 +127,13 @@ export async function loadYamlBuild(
   }
 
   resolveDependencies(pendingDeps);
-  resolveCleanTargets(pendingClean);
+
+  if (projectDef.clean) {
+    const targetNames = Array.isArray(projectDef.clean)
+      ? projectDef.clean
+      : [projectDef.clean];
+    resolveCleanTarget(proj, targetNames);
+  }
 
   logger?.debug(`Loaded project: ${projectDef.name}`);
 }
@@ -185,22 +191,16 @@ function findTarget(
   return proj?.targets.get(targetName);
 }
 
-function resolveCleanTargets(
-  pending: Array<{ project: Project; targetNames: string[] }>
-): void {
-  for (const { project: proj, targetNames } of pending) {
-    const targets: Target[] = [];
-    for (const name of targetNames) {
-      const target = proj.targets.get(name);
-      if (!target) {
-        throw new Error(
-          `Clean target reference not found: ${proj.name}:${name}`
-        );
-      }
-      targets.push(target);
+function resolveCleanTarget(proj: Project, targetNames: string[]): void {
+  const targets: Target[] = [];
+  for (const name of targetNames) {
+    const target = proj.targets.get(name);
+    if (!target) {
+      throw new Error(`Clean target reference not found: ${proj.name}:${name}`);
     }
-    proj.clean({ targets });
+    targets.push(target);
   }
+  proj.clean({ targets });
 }
 
 /**

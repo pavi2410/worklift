@@ -10,17 +10,19 @@ export interface YamlBuildFile {
   baseDir?: string;
   artifacts?: Record<string, YamlArtifactDef>;
   dependencies?: Record<string, string | string[]>;
-  targets?: Record<string, YamlTargetDef>;
+  clean?: string | string[];
+  targets?: Record<string, YamlTargetInput>;
 }
 
 export interface YamlArtifactDef {
   default?: unknown;
 }
 
-export interface YamlTargetDef {
-  tasks?: YamlTaskDef[];
-  clean?: string[];
-}
+/** Task list, legacy `{ tasks: [...] }`, or empty object for dependency-only targets */
+export type YamlTargetInput =
+  | YamlTaskDef[]
+  | { tasks?: YamlTaskDef[] }
+  | Record<string, never>;
 
 /** A task is a single-key object: { copy: { ... } } */
 export type YamlTaskDef = Record<string, Record<string, unknown>>;
@@ -37,5 +39,6 @@ export interface ParsedProjectDef {
   baseDir?: string;
   artifacts?: Record<string, YamlArtifactDef>;
   dependencies?: Record<string, string | string[]>;
-  targets?: Record<string, YamlTargetDef>;
+  clean?: string | string[];
+  targets?: Record<string, YamlTargetInput>;
 }
