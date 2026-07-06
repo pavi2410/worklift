@@ -1,11 +1,13 @@
-import { Task, Artifact, ExternalCommandError } from "@worklift/core";
+import {
+  Task,
+  Artifact,
+  ExternalCommandError,
+  type ClasspathElement,
+  registerClasspathElements,
+  resolveClasspathPaths,
+} from "@worklift/core";
 import { spawn } from "child_process";
 import { delimiter } from "path";
-
-/**
- * Type for classpath elements - can be strings, string arrays, or artifacts
- */
-type ClasspathElement = string | string[] | Artifact<string[]>;
 
 /**
  * Configuration for JavaTask
@@ -15,7 +17,7 @@ export interface JavaTaskConfig {
   mainClass?: string;
   /** JAR file to run (mutually exclusive with mainClass) */
   jar?: string;
-  /** Classpath entries (strings, arrays, or artifacts) */
+  /** Classpath entries (paths, artifacts, or target output refs) */
   classpath?: ClasspathElement[];
   /** JVM arguments (e.g., "-Xmx512m") */
   jvmArgs?: string[];
@@ -25,22 +27,6 @@ export interface JavaTaskConfig {
 
 /**
  * Task for running Java applications
- *
- * Supports consuming classpath from artifacts produced by dependency resolution tasks.
- *
- * @example
- * ```typescript
- * JavaTask.of({
- *   mainClass: "com.example.Main",
- *   classpath: [deps, "build/classes"],
- *   args: ["--verbose"],
- * })
- *
- * JavaTask.of({
- *   jar: "build/app.jar",
- *   jvmArgs: ["-Xmx512m"],
- * })
- * ```
  */
 export class JavaTask extends Task {
   private mainClassName?: string;
@@ -57,44 +43,15 @@ export class JavaTask extends Task {
     this.jvmArgsList = config.jvmArgs ?? [];
     this.programArgs = config.args ?? [];
 
-    // Set inputs for incremental builds
     if (this.jarFile) {
       this.inputs = this.jarFile;
     }
 
-    // Register artifact inputs (creates dependency edges)
-    for (const element of this.classpathElements) {
-      if (element instanceof Artifact) {
-        this.consumes(element);
-      }
-    }
+    registerClasspathElements(this, this.classpathElements);
   }
 
-  /**
-   * Create a new JavaTask with the given configuration.
-   */
   static of(config: JavaTaskConfig): JavaTask {
     return new JavaTask(config);
-  }
-
-  /**
-   * Resolve all classpath elements to a flat array of paths
-   */
-  private resolveClasspath(): string[] {
-    const resolved: string[] = [];
-
-    for (const element of this.classpathElements) {
-      if (typeof element === "string") {
-        resolved.push(element);
-      } else if (Array.isArray(element)) {
-        resolved.push(...element);
-      } else if (element instanceof Artifact) {
-        const paths = this.readArtifact(element);
-        resolved.push(...paths);
-      }
-    }
-
-    return resolved;
   }
 
   override validate() {
@@ -106,24 +63,19 @@ export class JavaTask extends Task {
   async execute() {
     const args: string[] = [];
 
-    // Add JVM args
     args.push(...this.jvmArgsList);
 
-    // Add classpath or jar
     if (this.jarFile) {
       args.push("-jar", this.jarFile);
     } else {
-      // Resolve classpath from all sources (strings, arrays, artifacts)
-      const classpath = this.resolveClasspath();
+      const classpath = await resolveClasspathPaths(this, this.classpathElements);
       if (classpath.length > 0) {
         args.push("-cp", classpath.join(delimiter));
       }
       args.push(this.mainClassName!);
     }
 
-    // Add program args
     args.push(...this.programArgs);
-
 
     return new Promise<void>((resolve, reject) => {
       const proc = spawn("java", args, {
@@ -134,11 +86,13 @@ export class JavaTask extends Task {
         if (code === 0) {
           resolve();
         } else {
-          reject(new ExternalCommandError(
-            `java failed with exit code ${code}`,
-            "java",
-            code ?? 1
-          ));
+          reject(
+            new ExternalCommandError(
+              `java failed with exit code ${code}`,
+              "java",
+              code ?? 1
+            )
+          );
         }
       });
 

@@ -42,7 +42,8 @@ const TASK_TYPES = new Set([
 
 export function parseTask(
   def: YamlTaskDef,
-  artifacts: Map<string, Artifact<string[]>>
+  artifacts: Map<string, Artifact<string[]>>,
+  projectName: string
 ): Task {
   const keys = Object.keys(def);
   if (keys.length !== 1) {
@@ -94,7 +95,7 @@ export function parseTask(
       return JavacTask.of({
         sources: config.sources as string | string[],
         destination: requireString(config, "destination"),
-        classpath: parseClasspath(config.classpath, artifacts),
+        classpath: parseClasspath(config.classpath, artifacts, projectName),
         sourceVersion: optionalString(config, "sourceVersion"),
         targetVersion: optionalString(config, "targetVersion"),
         encoding: optionalString(config, "encoding"),
@@ -105,14 +106,14 @@ export function parseTask(
       return JavaTask.of({
         mainClass: optionalString(config, "mainClass"),
         jar: optionalString(config, "jar"),
-        classpath: parseClasspath(config.classpath, artifacts),
+        classpath: parseClasspath(config.classpath, artifacts, projectName),
         jvmArgs: optionalStringArray(config, "jvmArgs"),
         args: optionalStringArray(config, "args"),
       });
     case "junit":
       return JUnitTask.of({
         testClasses: requireString(config, "testClasses"),
-        classpath: parseClasspath(config.classpath, artifacts),
+        classpath: parseClasspath(config.classpath, artifacts, projectName),
         includes: optionalStringArray(config, "includes"),
         excludes: optionalStringArray(config, "excludes"),
         reports: optionalString(config, "reports"),

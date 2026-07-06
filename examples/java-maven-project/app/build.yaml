@@ -2,7 +2,6 @@ artifacts:
   appDependencies: {}
 
 dependencies:
-  compile: [string-utils:jar]
   compile-tests: [compile, string-utils:resolve-deps]
   test: [compile-tests]
   jar: [compile]
@@ -24,7 +23,7 @@ targets:
         destination: build/classes
         classpath:
           - $appDependencies
-          - ../string-utils/build/libs/string-utils.jar
+          - string-utils:jar
         sourceVersion: "11"
         targetVersion: "11"
 
@@ -35,8 +34,8 @@ targets:
         classpath:
           - $junitClasspath
           - $appDependencies
-          - ../string-utils/build/libs/string-utils.jar
-          - build/classes
+          - string-utils:jar
+          - compile
         sourceVersion: "11"
         targetVersion: "11"
 
@@ -46,8 +45,8 @@ targets:
         classpath:
           - $junitClasspath
           - $appDependencies
-          - ../string-utils/build/libs/string-utils.jar
-          - build/classes
+          - string-utils:jar
+          - compile
         reports: build/reports
         version: 5
 
@@ -62,5 +61,5 @@ targets:
         mainClass: com.example.app.Application
         classpath:
           - $appDependencies
-          - ../string-utils/build/libs/string-utils.jar
-          - build/classes
+          - string-utils:jar
+          - compile

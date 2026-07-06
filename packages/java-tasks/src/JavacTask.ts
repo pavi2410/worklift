@@ -1,11 +1,15 @@
-import { Task, Artifact, ExternalCommandError, FileSet } from "@worklift/core";
+import {
+  Task,
+  Artifact,
+  ExternalCommandError,
+  type ClasspathElement,
+  registerClasspathElements,
+  resolveClasspathPaths,
+} from "@worklift/core";
 import { spawn } from "child_process";
 import { delimiter } from "path";
 
-/**
- * Type for classpath elements - can be strings, string arrays, artifacts, or FileSets
- */
-export type ClasspathElement = string | string[] | Artifact<string[]> | FileSet;
+export type { ClasspathElement };
 
 /**
  * Configuration for JavacTask
@@ -15,7 +19,7 @@ export interface JavacTaskConfig {
   sources: string | string[];
   /** Output directory for compiled classes */
   destination: string;
-  /** Classpath entries (strings, arrays, artifacts, or FileSets) */
+  /** Classpath entries (paths, artifacts, FileSets, or target output refs) */
   classpath?: ClasspathElement[];
   /** Java source version (e.g., "11", "17") */
   sourceVersion?: string;
@@ -27,19 +31,6 @@ export interface JavacTaskConfig {
 
 /**
  * Task for compiling Java source files
- *
- * Supports consuming classpath from artifacts produced by dependency resolution tasks.
- *
- * @example
- * ```typescript
- * JavacTask.of({
- *   sources: "src/main/java/com/example/Main.java",
- *   destination: "build/classes",
- *   classpath: [deps, "lib/extra.jar"],
- *   sourceVersion: "11",
- *   targetVersion: "11",
- * })
- * ```
  */
 export class JavacTask extends Task {
   private srcFiles: string | string[];
@@ -58,46 +49,14 @@ export class JavacTask extends Task {
     this.targetVer = config.targetVersion;
     this.encodingStr = config.encoding;
 
-    // Set inputs/outputs for incremental builds
     this.inputs = this.srcFiles;
     this.outputs = this.destDir;
 
-    // Register artifact inputs (creates dependency edges)
-    for (const element of this.classpathElements) {
-      if (element instanceof Artifact) {
-        this.consumes(element);
-      }
-    }
+    registerClasspathElements(this, this.classpathElements);
   }
 
-  /**
-   * Create a new JavacTask with the given configuration.
-   */
   static of(config: JavacTaskConfig): JavacTask {
     return new JavacTask(config);
-  }
-
-  /**
-   * Resolve all classpath elements to a flat array of paths
-   */
-  private async resolveClasspath(): Promise<string[]> {
-    const resolved: string[] = [];
-
-    for (const element of this.classpathElements) {
-      if (typeof element === "string") {
-        resolved.push(element);
-      } else if (Array.isArray(element)) {
-        resolved.push(...element);
-      } else if (element instanceof Artifact) {
-        const paths = this.readArtifact(element);
-        resolved.push(...paths);
-      } else if (element instanceof FileSet) {
-        const paths = await element.resolve();
-        resolved.push(...paths);
-      }
-    }
-
-    return resolved;
   }
 
   override validate() {
@@ -116,8 +75,7 @@ export class JavacTask extends Task {
 
     const args = ["-encoding", "utf8", "-d", this.destDir!];
 
-    // Resolve classpath from all sources (strings, arrays, artifacts, FileSets)
-    const classpath = await this.resolveClasspath();
+    const classpath = await resolveClasspathPaths(this, this.classpathElements);
     if (classpath.length > 0) {
       args.push("-cp", classpath.join(delimiter));
     }
@@ -136,7 +94,6 @@ export class JavacTask extends Task {
 
     args.push(...sources);
 
-
     return new Promise<void>((resolve, reject) => {
       const proc = spawn("javac", args, {
         stdio: "inherit",
@@ -146,11 +103,13 @@ export class JavacTask extends Task {
         if (code === 0) {
           resolve();
         } else {
-          reject(new ExternalCommandError(
-            `javac failed with exit code ${code}`,
-            "javac",
-            code ?? 1
-          ));
+          reject(
+            new ExternalCommandError(
+              `javac failed with exit code ${code}`,
+              "javac",
+              code ?? 1
+            )
+          );
         }
       });
 

@@ -1,8 +1,15 @@
-import { Task, Artifact, ExternalCommandError, FileSet } from "@worklift/core";
+import {
+  Task,
+  Artifact,
+  ExternalCommandError,
+  FileSet,
+  type ClasspathElement,
+  registerClasspathElements,
+  resolveClasspathPaths,
+} from "@worklift/core";
 import { spawn } from "child_process";
 import { mkdir } from "fs/promises";
 import { delimiter } from "path";
-import type { ClasspathElement } from "./JavacTask.ts";
 
 /**
  * Configuration for JUnitTask
@@ -75,12 +82,7 @@ export class JUnitTask extends Task {
     this.inputs = this.testClassesDir;
     this.outputs = this.reportsDir;
 
-    // Register artifact inputs (creates dependency edges)
-    for (const element of this.classpathElements) {
-      if (element instanceof Artifact) {
-        this.consumes(element);
-      }
-    }
+    registerClasspathElements(this, this.classpathElements);
   }
 
   /**
@@ -140,23 +142,7 @@ export class JUnitTask extends Task {
   }
 
   private async resolveClasspath(): Promise<string[]> {
-    const resolved: string[] = [];
-
-    for (const element of this.classpathElements) {
-      if (typeof element === "string") {
-        resolved.push(element);
-      } else if (Array.isArray(element)) {
-        resolved.push(...element);
-      } else if (element instanceof Artifact) {
-        const paths = this.readArtifact(element);
-        resolved.push(...paths);
-      } else if (element instanceof FileSet) {
-        const paths = await element.resolve();
-        resolved.push(...paths);
-      }
-    }
-
-    return resolved;
+    return resolveClasspathPaths(this, this.classpathElements);
   }
 
   private async runJUnit4(testClasses: string[], classpath: string[]): Promise<void> {

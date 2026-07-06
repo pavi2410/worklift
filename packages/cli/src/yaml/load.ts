@@ -98,9 +98,27 @@ export async function loadYamlBuild(
     }
   }
 
+  for (const targetName of Object.keys(targetDefs)) {
+    proj.target({ name: targetName, tasks: [] });
+  }
+
   for (const [targetName, targetDef] of Object.entries(targetDefs)) {
-    const tasks = parseTargetTasks(targetDef, targetName, artifacts);
-    proj.target({ name: targetName, tasks });
+    proj.targets.delete(targetName);
+    const tasks = parseTargetTasks(
+      targetDef,
+      targetName,
+      artifacts,
+      projectDef.name
+    );
+    const target = proj.target({ name: targetName, tasks });
+
+    for (const task of tasks) {
+      for (const dep of task.getClasspathTargetDependencies()) {
+        if (!hasTargetDependency(target, dep)) {
+          target.dependencies.push(dep);
+        }
+      }
+    }
   }
 
   for (const targetName of dependencyKeys) {
@@ -201,6 +219,16 @@ function resolveCleanTarget(proj: Project, targetNames: string[]): void {
     targets.push(target);
   }
   proj.clean({ targets });
+}
+
+function hasTargetDependency(target: Target, dep: Target): boolean {
+  return target.dependencies.some(
+    (existing) => existing === dep || (isTargetRef(existing) && existing === dep)
+  );
+}
+
+function isTargetRef(dep: Dependency): dep is Target {
+  return typeof dep === "object" && dep !== null && "taskList" in dep;
 }
 
 /**

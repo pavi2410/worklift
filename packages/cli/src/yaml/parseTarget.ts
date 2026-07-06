@@ -26,14 +26,15 @@ const TASK_TYPE_KEYS = new Set([
 export function parseTargetTasks(
   targetDef: unknown,
   targetName: string,
-  artifacts: Map<string, Artifact<string[]>>
+  artifacts: Map<string, Artifact<string[]>>,
+  projectName: string
 ): Task[] {
   if (targetDef === null || targetDef === undefined) {
     return [];
   }
 
   if (Array.isArray(targetDef)) {
-    return targetDef.map((t) => parseTask(t as YamlTaskDef, artifacts));
+    return targetDef.map((t) => parseTask(t as YamlTaskDef, artifacts, projectName));
   }
 
   if (typeof targetDef === "object") {
@@ -50,7 +51,7 @@ export function parseTargetTasks(
       if (!Array.isArray(tasks)) {
         throw new Error(`Target "${targetName}": tasks must be a list`);
       }
-      return tasks.map((t) => parseTask(t as YamlTaskDef, artifacts));
+      return tasks.map((t) => parseTask(t as YamlTaskDef, artifacts, projectName));
     }
 
     if (Object.keys(obj).length === 0) {
@@ -58,7 +59,7 @@ export function parseTargetTasks(
     }
 
     if (isTaskDef(obj)) {
-      return [parseTask(obj as YamlTaskDef, artifacts)];
+      return [parseTask(obj as YamlTaskDef, artifacts, projectName)];
     }
 
     throw new Error(

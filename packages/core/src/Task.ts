@@ -1,6 +1,7 @@
 import { Glob } from "bun";
 import { resolve } from "path";
 import { Artifact } from "./Artifact.ts";
+import type { Target } from "./types.ts";
 
 /**
  * Base class for all tasks in Worklift
@@ -35,6 +36,11 @@ export abstract class Task {
    * Used by the scheduler to determine task ordering.
    */
   readonly outputArtifacts: Artifact<unknown>[] = [];
+
+  /**
+   * Targets referenced on the classpath whose outputs this task consumes.
+   */
+  private readonly classpathTargetDependencies: Target[] = [];
 
   /**
    * Validate that all required parameters are set.
@@ -185,5 +191,36 @@ export abstract class Task {
    */
   protected readArtifact<T>(artifact: Artifact<T>): T {
     return artifact._getValue();
+  }
+
+  /** @internal Used by classpath helpers */
+  registerArtifactConsumer<T>(artifact: Artifact<T>): void {
+    this.consumes(artifact);
+  }
+
+  /** @internal Used by classpath helpers */
+  readArtifactValue<T>(artifact: Artifact<T>): T {
+    return this.readArtifact(artifact);
+  }
+
+  /** @internal Used by classpath helpers */
+  registerFileInputs(paths: string[]): void {
+    if (paths.length === 0) {
+      return;
+    }
+    const existing = this.normalizeInputs();
+    this.inputs = [...existing, ...paths];
+  }
+
+  /**
+   * Targets referenced via classpath (e.g. lib:jar) that must run first.
+   */
+  getClasspathTargetDependencies(): readonly Target[] {
+    return this.classpathTargetDependencies;
+  }
+
+  /** @internal Used by classpath helpers */
+  registerClasspathTargetDependency(target: Target): void {
+    this.classpathTargetDependencies.push(target);
   }
 }

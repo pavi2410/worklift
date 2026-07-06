@@ -127,7 +127,7 @@ targets:
     - javac:
         sources: src/**/*.java
         destination: build/classes
-        classpath: [../lib/build/lib.jar]
+        classpath: [lib:jar]
 ```
 
 ## Build File Reference
@@ -190,7 +190,7 @@ dependencies:
   package: compile
 ```
 
-Cross-project references use `project:target` syntax (e.g. `lib:jar`).
+Cross-project references use `project:target` syntax (e.g. `lib:jar`). The same form works on `classpath` to pull in another target's outputs without hard-coded paths.
 
 ### Clean targets
 
@@ -259,7 +259,7 @@ targets:
 - javac:
     sources: src/main/java/**/*.java
     destination: build/classes
-    classpath: [$deps, lib/extra.jar]
+    classpath: [$deps, lib:jar, lib/extra.jar]
     sourceVersion: "11"
     targetVersion: "11"
 

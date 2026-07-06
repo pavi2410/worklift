@@ -179,6 +179,39 @@ imports:
     expect(getProjectRegistry().size).toBe(1);
   });
 
+  test("infers target dependencies from classpath references", async () => {
+    writeBuild(
+      "lib/build.yaml",
+      `
+targets:
+  jar:
+    - jar:
+        from: build/classes
+        to: build/lib.jar
+`
+    );
+
+    const root = writeBuild(
+      "app/build.yaml",
+      `
+imports:
+  - ../lib/build.yaml
+targets:
+  compile:
+    - javac:
+        sources: src/Main.java
+        destination: build/classes
+        classpath: [lib:jar]
+`
+    );
+
+    await loadYamlBuild(root);
+
+    const compile = getProjectRegistry().get("app")!.targets.get("compile")!;
+    expect(compile.dependencies).toHaveLength(1);
+    expect(typeof compile.dependencies[0]).toBe("object");
+  });
+
   test("rejects unknown dependency references", async () => {
     const file = writeBuild(
       "app/build.yaml",

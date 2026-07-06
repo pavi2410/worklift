@@ -26,7 +26,7 @@ targets:
     - javac:
         sources: src/**/*.java
         destination: build/classes
-        classpath: [../lib/build/lib.jar]
+        classpath: [lib:jar]
 ```
 
 Run from the app directory:
@@ -93,7 +93,7 @@ targets:
     - javac:
         sources: src/**/*.java
         destination: build/classes
-        classpath: [../lib/build/lib.jar]
+        classpath: [lib:jar]
 ```
 
 The root build file wires modules together:
@@ -113,6 +113,21 @@ imports:
 | `lib:jar` | Target `jar` in project `lib` |
 | `[jar, test]` | Multiple prerequisites |
 | `jar: compile` | Single prerequisite (string shorthand) |
+
+## Classpath Target References
+
+On `classpath`, reference another target's outputs with `project:target` instead of brittle file paths:
+
+```yaml
+targets:
+  compile:
+    - javac:
+        sources: src/**/*.java
+        destination: build/classes
+        classpath: [lib:jar]
+```
+
+Worklift resolves `lib:jar` to that target's declared outputs at execution time and infers a target dependency so `lib:jar` runs first. Local targets work too (`classpath: [jar]`). Unknown `project:target` references are errors; plain strings without a matching target are treated as paths.
 
 ## Execution Behavior
 

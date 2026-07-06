@@ -11,3 +11,10 @@ export { FileSet } from "./FileSet.ts";
 export { Logger, LogLevel, LogFormat, type LoggerOptions } from "./logging/index.ts";
 export { getProjectRegistry } from "./types.ts";
 export { ExternalCommandError } from "./errors.ts";
+export {
+  type ClasspathElement,
+  isTarget,
+  collectTargetOutputs,
+  registerClasspathElements,
+  resolveClasspathPaths,
+} from "./classpath.ts";

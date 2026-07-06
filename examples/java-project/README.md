@@ -143,7 +143,7 @@ targets:
         sources: src/com/example/app/Main.java
         destination: build/classes
         classpath:
-          - ../lib/build/string-utils.jar
+          - lib:jar
 ```
 
 The `lib:jar` dependency ensures the library is packaged before app compilation.
@@ -171,7 +171,7 @@ targets:
         mainClass: com.example.app.Main
         classpath:
           - build/classes
-          - ../lib/build/string-utils.jar
+          - lib:jar
 ```
 
 ### 6. Target Dependencies

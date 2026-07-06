@@ -1,5 +1,4 @@
 dependencies:
-  compile: [lib:jar]
   jar: [compile]
   run: [compile]
 
@@ -11,7 +10,7 @@ targets:
         sources: src/com/example/app/Main.java
         destination: build/classes
         classpath:
-          - ../lib/build/string-utils.jar
+          - lib:jar
 
   jar:
     - jar:
@@ -23,5 +22,5 @@ targets:
     - java:
         mainClass: com.example.app.Main
         classpath:
-          - build/classes
-          - ../lib/build/string-utils.jar
+          - compile
+          - lib:jar
