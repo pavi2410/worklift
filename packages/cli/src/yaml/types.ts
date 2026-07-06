@@ -5,6 +5,7 @@
  */
 
 import type { JvmConfig } from "./parseJvmConfig.ts";
+import type { LibraryDef } from "./parseLibraries.ts";
 import type { ResolvedVariant } from "./parseVariants.ts";
 
 export interface YamlBuildFile {
@@ -14,6 +15,7 @@ export interface YamlBuildFile {
   jvm?: YamlJvmConfig;
   java?: YamlJvmConfig;
   variants?: Record<string, YamlVariantDef>;
+  libraries?: Record<string, YamlLibraryDef>;
   artifacts?: Record<string, YamlArtifactDef>;
   dependencies?: Record<string, string | string[]>;
   clean?: string | string[];
@@ -41,6 +43,15 @@ export interface YamlVariantDef {
   deps?: unknown;
 }
 
+export type YamlLibraryDef =
+  | string
+  | string[]
+  | {
+      preset?: string;
+      coordinates?: string[];
+      repositories?: string[];
+    };
+
 /** Task list, legacy `{ tasks: [...] }`, or empty object for dependency-only targets */
 export type YamlTargetInput =
   | YamlTaskDef[]
@@ -62,6 +73,7 @@ export interface ParsedProjectDef {
   baseDir?: string;
   jvm?: JvmConfig;
   variants?: Map<string, ResolvedVariant>;
+  libraries?: Map<string, LibraryDef>;
   artifacts?: Record<string, YamlArtifactDef>;
   dependencies?: Record<string, string | string[]>;
   clean?: string | string[];

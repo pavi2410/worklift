@@ -238,6 +238,47 @@ targets:
     expect(task.targetVer).toBe("17");
   });
 
+  test("infers artifact references without explicit artifacts block", async () => {
+    const file = writeBuild(
+      "app/build.yaml",
+      `
+targets:
+  compile:
+    - javac:
+        sources: src/Main.java
+        destination: build/classes
+        classpath: [$deps]
+`
+    );
+
+    await loadYamlBuild(file);
+
+    const compile = getProjectRegistry().get("app")!.targets.get("compile")!;
+    expect(compile.taskList).toHaveLength(1);
+  });
+
+  test("creates library resolve targets from libraries block", async () => {
+    const file = writeBuild(
+      "app/build.yaml",
+      `
+libraries:
+  junitClasspath: junit5
+targets:
+  compile-tests:
+    - javac:
+        sources: src/Test.java
+        destination: build/test-classes
+        classpath: [$junitClasspath]
+`
+    );
+
+    await loadYamlBuild(file);
+
+    const app = getProjectRegistry().get("app")!;
+    expect(app.targets.has("resolve-junitClasspath")).toBe(true);
+    expect(app.targets.get("resolve-junitClasspath")!.taskList).toHaveLength(1);
+  });
+
   test("parses javac variant shorthand", async () => {
     const file = writeBuild(
       "app/build.yaml",

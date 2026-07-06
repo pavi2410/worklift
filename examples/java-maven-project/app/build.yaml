@@ -1,10 +1,11 @@
-artifacts:
-  appDependencies: {}
-
 jvm:
   layout: maven
   source: "11"
   target: "11"
+
+libraries:
+  appDependencies:
+    - org.json:json:20230227
 
 variants:
   main:
@@ -17,7 +18,7 @@ variants:
       - main
 
 dependencies:
-  compile-tests: [compile, string-utils:resolve-deps]
+  compile-tests: [compile, string-utils:resolve-junitClasspath]
   test: [compile-tests]
   jar: [compile]
   build: [jar, test]
@@ -26,12 +27,6 @@ dependencies:
 clean: [compile, compile-tests, test, jar]
 
 targets:
-  resolve-deps:
-    - maven-dep:
-        coordinates:
-          - org.json:json:20230227
-        into: $appDependencies
-
   compile:
     - javac: main
 

@@ -1,5 +1,6 @@
 import { basename, dirname } from "path";
 import { parseJvmConfig } from "./parseJvmConfig.ts";
+import { parseLibraries } from "./parseLibraries.ts";
 import { resolveVariants } from "./parseVariants.ts";
 import type { ParsedProjectDef } from "./types.ts";
 
@@ -22,6 +23,7 @@ export function parseProjectFromDoc(
     baseDir: doc.baseDir as string | undefined,
     jvm,
     variants: resolveVariants(jvm, doc.variants),
+    libraries: parseLibraries(doc.libraries),
     artifacts: doc.artifacts as ParsedProjectDef["artifacts"],
     dependencies: doc.dependencies as ParsedProjectDef["dependencies"],
     clean: doc.clean as ParsedProjectDef["clean"],

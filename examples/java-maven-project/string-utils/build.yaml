@@ -1,10 +1,10 @@
-artifacts:
-  junitClasspath: {}
-
 jvm:
   layout: maven
   source: "11"
   target: "11"
+
+libraries:
+  junitClasspath: junit5
 
 variants:
   main: {}
@@ -20,11 +20,6 @@ dependencies:
 clean: [compile, compile-tests, test, jar]
 
 targets:
-  resolve-deps:
-    - maven-dep:
-        preset: junit5
-        into: $junitClasspath
-
   compile:
     - javac: main
 

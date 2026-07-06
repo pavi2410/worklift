@@ -148,7 +148,12 @@ imports:           # Optional: other build.yaml files to load
 
 name: my-project   # Optional: defaults to dir name (build.yaml) or filename
 baseDir: .         # Optional: defaults to the build file's directory
-artifacts:         # Optional: named values passed between tasks
+libraries:         # Optional: Maven libraries resolved into artifacts
+  junitClasspath: junit5
+  appDependencies:
+    - org.json:json:20230227
+
+artifacts:         # Optional: legacy explicit artifact declarations
   classpath: {}
 
 dependencies:      # Optional: target dependency graph
@@ -162,6 +167,23 @@ targets:
     - task-type:
         option: value
 ```
+
+### Libraries
+
+Declare Maven dependencies in a `libraries:` block. Worklift auto-creates a `resolve-<name>` target and artifact for each entry — no `artifacts: {}` or manual `resolve-deps` target needed:
+
+```yaml
+libraries:
+  junitClasspath: junit5
+  compileClasspath:
+    - org.json:json:20230227
+
+variants:
+  test:
+    deps: [main, $junitClasspath]
+```
+
+Artifact names are also inferred from `$refs` in the build file. The `maven-dep` task remains available for custom resolution.
 
 ### Artifacts
 

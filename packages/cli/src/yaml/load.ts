@@ -12,6 +12,9 @@ import {
 } from "@worklift/core";
 import { parseTargetTasks } from "./parseTarget.ts";
 import { parseProjectFromDoc } from "./parseProject.ts";
+import { libraryResolveTargetName } from "./parseLibraries.ts";
+import { collectArtifactNames } from "./scanArtifactRefs.ts";
+import { createLibraryMavenDepTask } from "./libraryTasks.ts";
 import type { YamlBuildFile } from "./types.ts";
 
 const loadedFiles = new Set<string>();
@@ -71,7 +74,13 @@ export async function loadYamlBuild(
     return;
   }
 
-  const artifacts = registerArtifacts(projectDef.artifacts ?? {});
+  const libraries = projectDef.libraries ?? new Map();
+  const artifactNames = collectArtifactNames(
+    projectDef.artifacts,
+    libraries,
+    doc
+  );
+  const artifacts = registerArtifacts(artifactNames);
 
   const pendingDeps: Array<{
     target: Target;
@@ -100,6 +109,23 @@ export async function loadYamlBuild(
 
   for (const targetName of Object.keys(targetDefs)) {
     proj.target({ name: targetName, tasks: [] });
+  }
+
+  for (const [libraryName, libraryDef] of libraries) {
+    const resolveTargetName = libraryResolveTargetName(libraryName);
+    if (proj.targets.has(resolveTargetName)) {
+      throw new Error(
+        `Target "${resolveTargetName}" conflicts with auto-created library resolve target`
+      );
+    }
+    const artifact = artifacts.get(libraryName);
+    if (!artifact) {
+      throw new Error(`Library artifact not registered: ${libraryName}`);
+    }
+    proj.target({
+      name: resolveTargetName,
+      tasks: [createLibraryMavenDepTask(libraryDef, artifact)],
+    });
   }
 
   for (const [targetName, targetDef] of Object.entries(targetDefs)) {
@@ -163,12 +189,11 @@ export async function loadYamlBuild(
 }
 
 function registerArtifacts(
-  defs: Record<string, { default?: unknown }>
+  names: Iterable<string>
 ): Map<string, Artifact<string[]>> {
   const artifacts = new Map<string, Artifact<string[]>>();
-  for (const name of Object.keys(defs)) {
-    const artifact = getOrCreateArtifact(name);
-    artifacts.set(name, artifact);
+  for (const name of names) {
+    artifacts.set(name, getOrCreateArtifact(name));
   }
   for (const [name, artifact] of globalArtifacts) {
     artifacts.set(name, artifact);
