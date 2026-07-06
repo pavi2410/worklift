@@ -1,0 +1,64 @@
+artifacts:
+  junitClasspath: {}
+
+projects:
+  string-utils:
+    targets:
+      resolve-deps:
+        tasks:
+          - maven-dep:
+              preset: junit5
+              into: $junitClasspath
+
+      compile:
+        tasks:
+          - javac:
+              sources: src/main/java/com/example/utils/StringUtils.java
+              destination: build/classes
+              sourceVersion: "11"
+              targetVersion: "11"
+
+      compile-tests:
+        dependsOn:
+          - compile
+        tasks:
+          - javac:
+              sources: src/test/java/com/example/utils/StringUtilsTest.java
+              destination: build/test-classes
+              classpath:
+                - $junitClasspath
+                - build/classes
+              sourceVersion: "11"
+              targetVersion: "11"
+
+      test:
+        dependsOn:
+          - compile-tests
+        tasks:
+          - junit:
+              testClasses: build/test-classes
+              classpath:
+                - $junitClasspath
+                - build/classes
+              reports: build/reports
+              version: 5
+
+      jar:
+        dependsOn:
+          - compile
+        tasks:
+          - jar:
+              from: build/classes
+              to: build/libs/string-utils.jar
+
+      build:
+        dependsOn:
+          - jar
+          - test
+
+      clean:
+        clean:
+          - compile
+          - compile-tests
+          - test
+          - jar

@@ -1,0 +1,87 @@
+artifacts:
+  compileClasspath: {}
+  testClasspath: {}
+
+projects:
+  maven-app:
+    targets:
+      prepare:
+        tasks:
+          - mkdir:
+              paths:
+                - build/classes
+                - build/test-classes
+
+      resolve-deps-for-compile:
+        tasks:
+          - maven-dep:
+              coordinates:
+                - org.json:json:20230227
+                - com.google.guava:guava:31.1-jre
+              into: $compileClasspath
+
+      resolve-deps-for-test:
+        tasks:
+          - maven-dep:
+              coordinates:
+                - commons-lang:commons-lang:2.6
+                - junit:junit:4.13.2
+              into: $testClasspath
+
+      compile-src:
+        dependsOn:
+          - prepare
+        tasks:
+          - javac:
+              sources: src/**/*.java
+              destination: build/classes
+              classpath:
+                - $compileClasspath
+
+      compile-test:
+        dependsOn:
+          - compile-src
+        tasks:
+          - javac:
+              sources: test/**/*.java
+              destination: build/test-classes
+              classpath:
+                - $compileClasspath
+                - $testClasspath
+                - build/classes
+
+      test:
+        dependsOn:
+          - compile-src
+          - compile-test
+        tasks:
+          - java:
+              mainClass: com.example.TestRunner
+              classpath:
+                - $compileClasspath
+                - $testClasspath
+                - build/classes
+                - build/test-classes
+              args:
+                - --verbose
+
+      run:
+        dependsOn:
+          - compile-src
+        tasks:
+          - java:
+              mainClass: com.example.Main
+              classpath:
+                - $compileClasspath
+                - build/classes
+
+      build:
+        dependsOn:
+          - compile-src
+          - compile-test
+
+      clean:
+        clean:
+          - prepare
+          - compile-src
+          - compile-test

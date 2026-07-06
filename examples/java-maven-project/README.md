@@ -16,10 +16,10 @@ A comprehensive example demonstrating how to build multi-module Java projects us
 
 ```
 java-maven-project/
-├── build.ts                     # Root build script (imports modules)
+├── build.yaml                     # Root build file (imports modules)
 ├── README.md                    # This file
 ├── string-utils/                # Library module
-│   ├── build.ts                 # Library build configuration
+│   ├── build.yaml                 # Library build configuration
 │   ├── src/
 │   │   ├── main/java/           # Maven convention: main source code
 │   │   │   └── com/example/utils/
@@ -32,7 +32,7 @@ java-maven-project/
 │       ├── test-classes/
 │       └── libs/string-utils.jar
 └── app/                         # Application module
-    ├── build.ts                 # Application build configuration
+    ├── build.yaml                 # Application build configuration
     ├── src/
     │   ├── main/java/           # Maven convention: main source code
     │   │   └── com/example/app/
@@ -83,7 +83,7 @@ Demonstration application that:
 
 ```bash
 cd examples/java-maven-project
-bun run build.ts
+bun ../../packages/cli/src/index.ts string-utils:build app:build
 ```
 
 This will:
@@ -100,23 +100,23 @@ This will:
 
 ### Run Individual Targets
 
-You can also run specific targets by modifying `build.ts`:
+You can also run specific targets from the CLI:
 
-```typescript
-// Run only library tests
-await stringUtilsTest.execute();
+```bash
+# Run only library tests
+bun ../../packages/cli/src/index.ts string-utils:test
 
-// Run only app tests
-await appTest.execute();
+# Run only app tests
+bun ../../packages/cli/src/index.ts app:test
 
-// Run the application
-await appRun.execute();
+# Run the application
+bun ../../packages/cli/src/index.ts app:run
 
-// Build only the library
-await stringUtilsBuild.execute();
+# Build only the library
+bun ../../packages/cli/src/index.ts string-utils:build
 
-// Build only the app
-await appBuild.execute();
+# Build only the app
+bun ../../packages/cli/src/index.ts app:build
 ```
 
 ## Key Worklift Features Demonstrated
@@ -292,7 +292,7 @@ This demonstrates:
 
 - Modify `string-utils/src/main/java/com/example/utils/StringUtils.java` to add new utility functions
 - Add more tests in the test directories
-- Add more Maven dependencies in `build.ts`
+- Add more Maven dependencies in `build.yaml`
 - Create additional modules following the same conventions
 - Explore different JUnit 5 testing features
 

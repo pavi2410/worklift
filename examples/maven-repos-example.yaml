@@ -1,0 +1,79 @@
+artifacts:
+  compileClasspath: {}
+  androidClasspath: {}
+  allClasspath: {}
+  springClasspath: {}
+  apacheClasspath: {}
+  dynamicClasspath: {}
+
+projects:
+  maven-repos-demo:
+    targets:
+      resolve-from-central:
+        tasks:
+          - maven-dep:
+              coordinates:
+                - org.json:json:20230227
+              into: $compileClasspath
+
+      resolve-from-multiple:
+        tasks:
+          - maven-dep:
+              coordinates:
+                - com.google.android:android:4.1.1.4
+              repositories:
+                - central
+                - google
+                - jboss
+              into: $androidClasspath
+
+      resolve-from-custom:
+        tasks:
+          - maven-dep:
+              coordinates:
+                - com.example:proprietary-lib:1.0.0
+              repositories:
+                - https://my-company.com/maven
+                - https://repo1.maven.org/maven2
+
+      resolve-all-deps:
+        tasks:
+          - maven-dep:
+              coordinates:
+                - org.json:json:20230227
+                - com.google.guava:guava:31.1-jre
+                - commons-lang:commons-lang:2.6
+                - junit:junit:4.13.2
+              repositories:
+                - central
+                - google
+                - jboss
+              into: $allClasspath
+
+      resolve-by-type:
+        tasks:
+          - maven-dep:
+              coordinates:
+                - org.springframework:spring-core:5.3.23
+              repositories:
+                - spring
+                - central
+              into: $springClasspath
+          - maven-dep:
+              coordinates:
+                - org.apache.commons:commons-lang3:3.12.0
+              repositories:
+                - https://repository.apache.org/content/repositories/snapshots
+                - central
+              into: $apacheClasspath
+
+      resolve-dynamic:
+        tasks:
+          - maven-dep:
+              coordinates:
+                - org.json:json:20230227
+                - com.google.guava:guava:31.1-jre
+              repositories:
+                - central
+                - google
+              into: $dynamicClasspath

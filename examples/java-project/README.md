@@ -12,15 +12,15 @@ This example demonstrates how to build a multi-project Java application with Wor
 
 ```
 examples/java-project/
-├── build.ts                            # Root build script (imports modules)
+├── build.yaml                            # Root build file (imports modules)
 ├── README.md                           # This file
 ├── lib/                                # JAR library subproject
-│   ├── build.ts                        # Library build configuration
+│   ├── build.yaml                        # Library build configuration
 │   └── src/
 │       └── com/example/lib/
 │           └── StringUtils.java        # Utility class with string functions
 └── app/                                # Java application subproject
-    ├── build.ts                        # Application build configuration
+    ├── build.yaml                        # Application build configuration
     └── src/
         └── com/example/app/
             └── Main.java               # Main application
@@ -81,7 +81,7 @@ The simplest way to run the example:
 
 ```bash
 cd examples/java-project
-bun run build.ts
+bun ../../packages/cli/src/index.ts app:run
 ```
 
 This will:
@@ -95,13 +95,13 @@ You can also build individual targets:
 
 ```bash
 # Build just the library JAR
-bun run build.ts lib:jar
+bun ../../packages/cli/src/index.ts lib:jar
 
 # Build the application JAR
-bun run build.ts app:jar
+bun ../../packages/cli/src/index.ts app:jar
 
 # Run the application
-bun run build.ts app:run
+bun ../../packages/cli/src/index.ts app:run
 ```
 
 ## Key Worklift Features Demonstrated

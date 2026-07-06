@@ -1,0 +1,87 @@
+artifacts:
+  appDependencies: {}
+
+projects:
+  app:
+    targets:
+      resolve-deps:
+        tasks:
+          - maven-dep:
+              coordinates:
+                - org.json:json:20230227
+              into: $appDependencies
+
+      compile:
+        dependsOn:
+          - string-utils:jar
+        tasks:
+          - javac:
+              sources: src/main/java/com/example/app/Application.java
+              destination: build/classes
+              classpath:
+                - $appDependencies
+                - ../string-utils/build/libs/string-utils.jar
+              sourceVersion: "11"
+              targetVersion: "11"
+
+      compile-tests:
+        dependsOn:
+          - compile
+          - string-utils:resolve-deps
+        tasks:
+          - javac:
+              sources: src/test/java/com/example/app/ApplicationTest.java
+              destination: build/test-classes
+              classpath:
+                - $junitClasspath
+                - $appDependencies
+                - ../string-utils/build/libs/string-utils.jar
+                - build/classes
+              sourceVersion: "11"
+              targetVersion: "11"
+
+      test:
+        dependsOn:
+          - compile-tests
+        tasks:
+          - junit:
+              testClasses: build/test-classes
+              classpath:
+                - $junitClasspath
+                - $appDependencies
+                - ../string-utils/build/libs/string-utils.jar
+                - build/classes
+              reports: build/reports
+              version: 5
+
+      jar:
+        dependsOn:
+          - compile
+        tasks:
+          - jar:
+              from: build/classes
+              to: build/libs/app.jar
+              mainClass: com.example.app.Application
+
+      build:
+        dependsOn:
+          - jar
+          - test
+
+      run:
+        dependsOn:
+          - compile
+        tasks:
+          - java:
+              mainClass: com.example.app.Application
+              classpath:
+                - $appDependencies
+                - ../string-utils/build/libs/string-utils.jar
+                - build/classes
+
+      clean:
+        clean:
+          - compile
+          - compile-tests
+          - test
+          - jar

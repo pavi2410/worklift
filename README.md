@@ -1,27 +1,25 @@
 # Worklift
 
-A modern build tool with TypeScript DSL - an alternative to Apache Ant.
+A modern build tool with a YAML DSL — an alternative to Apache Ant.
 
 ## Overview
 
-Worklift allows you to define build processes using TypeScript instead of XML. It provides a clean, type-safe DSL for organizing builds into projects, targets, and tasks.
+Worklift lets you define build processes in YAML instead of XML or imperative scripts. Projects are organized into targets and tasks, with incremental builds and dependency management built in.
 
 ## Features
 
-- **TypeScript DSL**: Write your build scripts in TypeScript with full type safety
+- **YAML DSL**: Declarative build files that are easy to read and edit
 - **Incremental Builds**: Tasks track inputs/outputs to avoid unnecessary work
 - **Comprehensive Dependency Management**:
   - Targets can depend on other targets within the same project
   - Projects can depend on other projects
   - Targets can depend on specific targets in other projects
   - Automatic cyclic dependency detection
-- **Extensible**: Easy to add custom tasks and language-specific modules
-- **Package-based Architecture**: Modular monorepo structure with separate packages for core, file tasks, and Java tasks
-- **Built-in Tasks**: Common operations (copy, move, delete, mkdir, create file, zip, unzip, exec) and Java support (javac, jar, java)
+- **Extensible**: Add custom tasks in TypeScript when needed
+- **Package-based Architecture**: Modular monorepo with core, file tasks, and Java tasks
+- **Built-in Tasks**: File operations (copy, move, delete, mkdir, zip, exec) and Java support (javac, jar, java, junit, maven-dep)
 
 ## Monorepo Structure
-
-Worklift uses a package-based monorepo structure:
 
 ```
 worklift/
@@ -29,21 +27,10 @@ worklift/
 │   ├── core/              # @worklift/core - Base classes and project system
 │   ├── file-tasks/        # @worklift/file-tasks - File and OS operations
 │   ├── java-tasks/        # @worklift/java-tasks - Java build tasks
+│   ├── cli/               # @worklift/cli - CLI and YAML loader
 │   └── worklift/          # worklift - Meta-package that re-exports everything
-├── examples/              # Example build scripts
+├── examples/              # Example build files
 └── package.json           # Workspace configuration
-```
-
-You can import from individual packages or use the convenience `worklift` package:
-
-```typescript
-// Option 1: Import from the main package (recommended)
-import { project, CopyTask, JavacTask } from "worklift";
-
-// Option 2: Import from specific packages
-import { project } from "@worklift/core";
-import { CopyTask, MoveTask } from "@worklift/file-tasks";
-import { JavacTask } from "@worklift/java-tasks";
 ```
 
 ## Installation
@@ -56,47 +43,24 @@ bun install
 
 ### Running Worklift CLI
 
-No build step required! Bun executes TypeScript natively.
+No build step required — Bun executes TypeScript natively.
 
-**Direct invocation (Recommended)**
-
-From any directory in the repository, use a relative path to the CLI source:
+**Direct invocation (recommended)**
 
 ```bash
 # From examples/java-maven-project/
 bun ../../packages/cli/src/index.ts list
 bun ../../packages/cli/src/index.ts string-utils:build
 
-# From examples/java-project/
-bun ../../packages/cli/src/index.ts build
-
 # From repository root
 bun packages/cli/src/index.ts list
-```
-
-**Using the root npm script**
-
-From the repository root:
-
-```bash
-bun run worklift list
 bun run worklift build
 ```
 
-### Example: Running from the Java Maven Project
+Worklift looks for `build.yaml` in the current directory by default. Use `-f` to specify another file:
 
 ```bash
-cd examples/java-maven-project
-
-# List all available targets
-bun ../../packages/cli/src/index.ts list
-
-# Run specific targets
-bun ../../packages/cli/src/index.ts string-utils:build
-bun ../../packages/cli/src/index.ts app:run
-
-# Run multiple targets
-bun ../../packages/cli/src/index.ts string-utils:clean string-utils:build app:build
+bun packages/cli/src/index.ts -f examples/fileset-example.yaml list
 ```
 
 ## Quick Start
@@ -111,495 +75,236 @@ Instead of XML like Apache Ant:
 </project>
 ```
 
-You can write TypeScript:
+You can write YAML:
 
-```typescript
-import { project, CopyTask, JavacTask } from "worklift";
-
-const app = project("app");
-
-const build = app.target({
-  name: "build",
-  tasks: [
-    JavacTask.of({
-      sources: "src/**/*.java",
-      destination: "build",
-    }),
-  ],
-});
-
-const test = app.target({
-  name: "test",
-  dependsOn: [build],
-  tasks: [
-    CopyTask.of({ from: "test-data", to: "build/test-data" }),
-  ],
-});
-
-// Execute using target reference
-await build.execute();
+```yaml
+projects:
+  app:
+    targets:
+      build:
+        tasks:
+          - javac:
+              sources: src/**/*.java
+              destination: build/classes
+              sourceVersion: "11"
+              targetVersion: "11"
 ```
 
-## Core Concepts
+### Multi-module projects
 
-### Projects
+Split build files and link them with `imports`:
 
-A project is the top-level container for your build:
-
-```typescript
-// Create projects
-const lib = project("lib");
-const app = project("app");
-
-// Define targets with tasks
-const libBuild = lib.target({
-  name: "build",
-  tasks: [
-    // Tasks go here
-  ],
-});
-
-const libTest = lib.target({
-  name: "test",
-  dependsOn: [libBuild],
-  tasks: [
-    // Tasks go here
-  ],
-});
-
-// Cross-project target dependencies
-const appBuild = app.target({
-  name: "build",
-  dependsOn: [libBuild],  // This runs after lib:build
-  tasks: [
-    // Tasks go here
-  ],
-});
+```yaml
+# build.yaml (root)
+imports:
+  - ./lib/build.yaml
+  - ./app/build.yaml
 ```
 
-### Targets
-
-Targets are named groups of tasks that can depend on other targets:
-
-```typescript
-// Create a project
-const app = project("app");
-const lib = project("lib");
-
-// Define targets
-const compile = app.target({
-  name: "compile",
-  tasks: [
-    // Tasks go here
-  ],
-});
-
-const packageTarget = app.target({
-  name: "package",
-  dependsOn: [compile],  // This runs after 'compile'
-  tasks: [
-    // Tasks go here
-  ],
-});
-
-// Get target reference and execute
-const libBuild = lib.target({
-  name: "build",
-  tasks: [
-    // Tasks go here
-  ],
-});
-await libBuild.execute(); // Execute directly
-
-// Target with cross-project dependencies using target references
-const frontend = project("frontend");
-const frontendCompile = frontend.target({
-  name: "compile",
-  tasks: [
-    // Tasks go here
-  ],
-});
-
-const frontendBuild = frontend.target({
-  name: "build",
-  dependsOn: [frontendCompile, libBuild],  // Mix local and cross-project deps
-  tasks: [
-    // This runs after 'compile' and 'lib:build'
-  ],
-});
+```yaml
+# lib/build.yaml
+projects:
+  lib:
+    targets:
+      jar:
+        tasks:
+          - javac:
+              sources: src/**/*.java
+              destination: build/classes
+          - jar:
+              from: build/classes
+              to: build/lib.jar
 ```
 
-**Dependency Types:**
-- **Target reference** - Depend on a specific target (recommended): `dependsOn: [libBuild]`
-- **String** - Depend on a target by name within the same project: `dependsOn: ["clean"]`
+```yaml
+# app/build.yaml
+projects:
+  app:
+    targets:
+      build:
+        dependsOn: [lib:jar]
+        tasks:
+          - javac:
+              sources: src/**/*.java
+              destination: build/classes
+              classpath: [../lib/build/lib.jar]
+```
 
-See [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md) for detailed documentation.
+## Build File Reference
+
+### Top-level structure
+
+```yaml
+imports:           # Optional: other build.yaml files to load
+  - ./module/build.yaml
+
+artifacts:         # Optional: named values passed between tasks
+  classpath: {}
+
+projects:
+  my-project:
+    baseDir: .     # Optional: defaults to the build file's directory
+    targets:
+      target-name:
+        dependsOn: [other-target, other-project:target]
+        tasks:
+          - task-type:
+              option: value
+```
 
 ### Artifacts
 
-Artifacts provide type-safe data passing between tasks, enabling automatic dependency inference:
+Artifacts pass data (such as resolved Maven JAR paths) between tasks. Reference them with a `$` prefix:
 
-```typescript
-import { project, Artifact } from "@worklift/core";
-import { MavenDepTask, JavacTask } from "@worklift/java-tasks";
+```yaml
+artifacts:
+  compileClasspath: {}
 
-// Define a typed artifact
-const classpath = Artifact.of<string[]>();
+projects:
+  my-app:
+    targets:
+      resolve-deps:
+        tasks:
+          - maven-dep:
+              coordinates:
+                - org.json:json:20230227
+              into: $compileClasspath
 
-const app = project("my-app");
-
-// Producer task writes to the artifact
-app.target({
-  name: "resolve-deps",
-  tasks: [
-    MavenDepTask.of({
-      coordinates: ["org.json:json:20230227"],
-      into: classpath,
-    }),
-  ],
-});
-
-// Consumer task reads from the artifact
-// The scheduler automatically runs resolve-deps first!
-app.target({
-  name: "compile",
-  tasks: [
-    JavacTask.of({
-      sources: "src/**/*.java",
-      destination: "build/classes",
-      classpath: [classpath],
-    }),
-  ],
-});
+      compile:
+        tasks:
+          - javac:
+              sources: src/**/*.java
+              destination: build/classes
+              classpath: [$compileClasspath]
 ```
 
-See [docs/ARTIFACTS.md](docs/ARTIFACTS.md) for detailed documentation.
+The scheduler runs `resolve-deps` before `compile` automatically.
 
-### Tasks
+### Dependencies
 
-Tasks are the actual build operations. They use an object-based configuration and track inputs and outputs for incremental builds:
+Target dependencies use `dependsOn`:
 
-```typescript
-CopyTask.of({ from: "src/config", to: "build/config" })
-// Automatically tracks inputs/outputs for incremental builds
+```yaml
+dependsOn:
+  - compile              # Same project
+  - lib:jar              # Cross-project (project:target)
 ```
 
-## Available Packages & Tasks
+### Clean targets
 
-### @worklift/core
-
-Core functionality including `Task` base class, `project`, `Target`, and the task scheduler.
-
-```typescript
-import { project, Task } from "@worklift/core";
+```yaml
+clean:
+  clean: [compile, jar, test]
 ```
 
-### @worklift/file-tasks
+### Available tasks
 
-Common file and OS operations with FileSet support for advanced file selection:
+| Task | Description |
+|------|-------------|
+| `copy` | Copy files or directories |
+| `move` | Move/rename files |
+| `delete` | Delete files or directories |
+| `mkdir` | Create directories |
+| `create-file` | Create a file with content |
+| `zip` / `unzip` | Archive operations |
+| `exec` | Run shell commands |
+| `javac` | Compile Java sources |
+| `jar` | Create JAR files |
+| `java` | Run Java applications |
+| `junit` | Run JUnit tests |
+| `maven-dep` | Resolve Maven dependencies |
+| `war` | Create WAR archives |
 
-#### FileSet - Reusable File Collections
+#### File tasks
 
-FileSet provides a powerful way to define reusable file collections with include/exclude patterns:
+```yaml
+- copy:
+    from: src
+    to: dist
 
-```typescript
-import { FileSet } from "worklift";
+- copy:
+    files:
+      dir: src
+      include: "**/*.ts"
+      exclude: "**/*.test.ts"
+    to: dist
+    rename:
+      pattern: "\\.ts$"
+      replacement: ".js"
 
-// Define a file set
-const sourceFiles = FileSet.dir("src")
-  .include("**/*.ts")
-  .exclude("**/*.test.ts");
+- delete:
+    paths: [build, dist]
 
-// Combine multiple file sets
-const allSources = FileSet.union(
-  FileSet.dir("src").include("**/*.ts"),
-  FileSet.dir("lib").include("**/*.ts")
-);
-
-// Use with tasks
-CopyTask.of({ files: sourceFiles, to: "build" });
+- exec:
+    command: npm
+    args: [install]
+    cwd: ./app
 ```
 
-#### File Tasks
+#### Java tasks
 
-All tasks use an object-based configuration via `Task.of({ ... })`:
+```yaml
+- javac:
+    sources: src/main/java/**/*.java
+    destination: build/classes
+    classpath: [$deps, lib/extra.jar]
+    sourceVersion: "11"
+    targetVersion: "11"
 
-- **CopyTask**: Copy files or directories
-  ```typescript
-  CopyTask.of({ from: "src", to: "dest" })
-  CopyTask.of({ files: fileSet, to: "dest", flatten: true })
-  CopyTask.of({ from: "src", to: "dest", rename: { pattern: /\.ts$/, replacement: ".js" } })
-  ```
+- jar:
+    from: build/classes
+    to: dist/app.jar
+    mainClass: com.example.Main
 
-- **MoveTask**: Move/rename files or directories
-  ```typescript
-  MoveTask.of({ from: "old", to: "new" })
-  MoveTask.of({ files: fileSet, to: "dest", flatten: true })
-  ```
+- java:
+    mainClass: com.example.Main
+    classpath: [build/classes, lib/*.jar]
+    args: [--verbose]
 
-- **DeleteTask**: Delete files or directories
-  ```typescript
-  DeleteTask.of({ paths: ["file1", "file2"] })
-  DeleteTask.of({ patterns: ["**/*.tmp"], baseDir: "build" })
-  DeleteTask.of({ files: fileSet })
-  ```
+- maven-dep:
+    preset: junit5          # Or use coordinates: [...]
+    into: $testClasspath
 
-- **ZipTask**: Create ZIP archives
-  ```typescript
-  ZipTask.of({ from: "src", to: "app.zip" })
-  ZipTask.of({ files: fileSet, to: "app.zip" })
-  ```
-
-- **UnzipTask**: Extract ZIP archives
-  ```typescript
-  UnzipTask.of({ file: "app.zip", to: "dest", overwrite: true })
-  ```
-
-- **MkdirTask**: Create directories
-  ```typescript
-  MkdirTask.of({ paths: ["build/classes", "dist"] })
-  ```
-
-- **CreateFileTask**: Create a file with content
-  ```typescript
-  CreateFileTask.of({ path: "config.json", content: "{}" })
-  ```
-
-- **ExecTask**: Execute shell commands
-  ```typescript
-  ExecTask.of({ command: "npm", args: ["install"], cwd: "./app" })
-  ```
-
-### @worklift/java-tasks
-
-Java build tasks:
-
-- **JavacTask**: Compile Java source files
-  ```typescript
-  JavacTask.of({
-    sources: "src/**/*.java",
-    destination: "build/classes",
-    classpath: ["lib/*.jar"],
-    sourceVersion: "11",
-    targetVersion: "11",
-  })
-  ```
-
-- **JarTask**: Create JAR files
-  ```typescript
-  JarTask.of({
-    from: "build/classes",
-    to: "dist/app.jar",
-    mainClass: "com.example.Main",
-  })
-  ```
-
-- **JavaTask**: Run Java applications
-  ```typescript
-  JavaTask.of({
-    mainClass: "com.example.Main",
-    classpath: ["build/classes", "lib/*.jar"],
-    jvmArgs: ["-Xmx512m"],
-    args: ["--verbose"],
-  })
-  // Or run a JAR directly
-  JavaTask.of({ jar: "app.jar", args: ["--help"] })
-  ```
-
-- **MavenDepTask**: Resolve Maven dependencies
-  ```typescript
-  const classpath = Artifact.of<string[]>();
-  
-  MavenDepTask.of({
-    coordinates: ["org.json:json:20230227", "com.google.guava:guava:31.1-jre"],
-    repositories: [MavenRepos.CENTRAL, MavenRepos.GOOGLE],
-    into: classpath,  // Writes resolved JAR paths to artifact
-  })
-  ```
-
-### worklift (meta-package)
-
-Convenience package that re-exports all tasks and core functionality:
-
-```typescript
-import { project, CopyTask, MoveTask, JavacTask, ZipTask } from "worklift";
+- junit:
+    testClasses: build/test-classes
+    classpath: [$testClasspath, build/classes]
+    version: 5
 ```
 
-## Example
+Maven dependency presets: `junit4`, `junit5`. Repository aliases: `central`, `google`, `jcenter`, `spring`, `jboss`.
 
-```typescript
-import { project, CopyTask, MkdirTask, JavacTask, JarTask } from "worklift";
+## Examples
 
-const app = project("app");
+See the `examples/` directory:
 
-const init = app.target({
-  name: "init",
-  tasks: [
-    MkdirTask.of({ paths: ["build/classes", "dist"] }),
-  ],
-});
-
-const compile = app.target({
-  name: "compile",
-  dependsOn: [init],
-  tasks: [
-    JavacTask.of({
-      sources: "src/**/*.java",
-      destination: "build/classes",
-      sourceVersion: "11",
-      targetVersion: "11",
-    }),
-  ],
-});
-
-const packageTarget = app.target({
-  name: "package",
-  dependsOn: [compile],
-  tasks: [
-    JarTask.of({
-      from: "build/classes",
-      to: "dist/app.jar",
-      mainClass: "com.example.Main",
-    }),
-  ],
-});
-
-const build = app.target({
-  name: "build",
-  dependsOn: [packageTarget],
-  tasks: [
-    CopyTask.of({ from: "README.md", to: "dist/" }),
-    CopyTask.of({ from: "LICENSE", to: "dist/" }),
-  ],
-});
-
-// Clean target - deletes: build/classes, dist/app.jar, dist/
-const clean = app.clean({ targets: [compile, packageTarget, build] });
-
-// Execute a target
-await app.execute("build");
-```
-
-## Running the Example
+- `java-maven-project/` — Multi-module Java project with Maven dependencies
+- `java-project/` — Simple multi-module Java build
+- `fileset-example.yaml` — Advanced file selection patterns
+- `maven-artifacts-example.yaml` — Artifact-based dependency passing
 
 ```bash
-bun run example
-```
-
-## FileSet Examples
-
-FileSet provides a clean way to define reusable file collections for complex file operations:
-
-### Basic Usage
-
-```typescript
-import { FileSet, CopyTask, ZipTask, DeleteTask } from "worklift";
-
-// Define reusable file sets
-const sourceFiles = FileSet.dir("src")
-  .include("**/*.ts")
-  .exclude("**/*.test.ts");
-
-const resources = FileSet.dir("resources")
-  .include("**/*.json", "**/*.xml")
-  .exclude("**/temp/**");
-
-// Use with tasks
-const build = app.target({
-  name: "build",
-  tasks: [
-    CopyTask.of({ files: sourceFiles, to: "build/src" }),
-    CopyTask.of({ files: resources, to: "build/resources" }),
-  ],
-});
-```
-
-### Advanced Patterns
-
-```typescript
-// Runtime libraries (exclude test dependencies)
-const runtimeLibs = FileSet.dir("lib")
-  .include("**/*.jar")
-  .exclude("**/test/**", "**/*-test.jar");
-
-// Combine multiple FileSets
-const allDocumentation = FileSet.union(
-  FileSet.dir("docs").include("**/*.md"),
-  FileSet.dir("api-docs").include("**/*.html"),
-  FileSet.dir(".").include("README.md", "LICENSE")
-);
-
-// Use with operations
-const packageTarget = app.target({
-  name: "package",
-  tasks: [
-    CopyTask.of({ files: runtimeLibs, to: "dist/lib" }),
-    CopyTask.of({
-      files: sourceFiles,
-      to: "dist/sources",
-      rename: { pattern: /\.ts$/, replacement: ".js" },
-    }),
-    ZipTask.of({ files: allDocumentation, to: "dist/docs.zip" }),
-    DeleteTask.of({ files: FileSet.dir("build").include("**/*.tmp", "**/*.log") }),
-  ],
-});
+cd examples/java-maven-project
+bun ../../packages/cli/src/index.ts list
+bun ../../packages/cli/src/index.ts string-utils:build
 ```
 
 ## Incremental Builds
 
-Tasks automatically track inputs and outputs. If outputs are newer than inputs, the task is skipped:
-
-```typescript
-CopyTask.of({ from: "src/data", to: "build/data" })
-// Will skip if build/data is newer than src/data
-```
+Tasks automatically track inputs and outputs. If outputs are newer than inputs, the task is skipped.
 
 ## Creating Custom Tasks
 
-You can create custom tasks by extending the `Task` base class:
+For behavior not covered by built-in tasks, extend the `Task` base class in TypeScript:
 
 ```typescript
 import { Task } from "worklift";
 
-interface MyCustomTaskConfig {
-  option: string;
-  inputFiles?: string;
-}
-
 export class MyCustomTask extends Task {
-  private myOption: string;
-
-  constructor(config: MyCustomTaskConfig) {
-    super();
-    this.myOption = config.option;
-    this.inputs = config.inputFiles ?? "src/**/*.txt";
-    this.outputs = "build/output.txt";
-  }
-
-  static of(config: MyCustomTaskConfig): MyCustomTask {
-    return new MyCustomTask(config);
-  }
-
-  override validate() {
-    if (!this.myOption) {
-      throw new Error("MyCustomTask: 'option' is required");
-    }
-  }
-
-  async execute() {
-    console.log(`Doing custom work with ${this.myOption}...`);
-    // Your task implementation here
-  }
+  // ...
 }
-
-// Usage:
-const target = app.target({
-  name: "custom",
-  tasks: [
-    MyCustomTask.of({ option: "some-value" }),
-  ],
-});
 ```
+
+Custom tasks can be used from TypeScript-based build extensions; the YAML DSL covers the standard task set.
 
 ## License
 
@@ -607,4 +312,4 @@ MIT
 
 ## Contributing
 
-Contributions welcome! This is a fresh project ready for expansion.
+Contributions welcome!

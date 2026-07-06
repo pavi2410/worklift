@@ -1,14 +1,14 @@
 {
   "name": "worklift-monorepo",
   "version": "0.1.0",
-  "description": "A modern build tool with TypeScript DSL - an alternative to Apache Ant",
+  "description": "A modern build tool with YAML DSL - an alternative to Apache Ant",
   "type": "module",
   "private": true,
   "workspaces": [
     "packages/*"
   ],
   "scripts": {
-    "example": "bun run examples/example.ts",
+    "example": "bun packages/cli/src/index.ts -f examples/java-maven-project/build.yaml list",
     "test": "bun test",
     "worklift": "bun packages/cli/src/index.ts"
   },

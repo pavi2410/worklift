@@ -7,13 +7,13 @@ const program = new Command();
 
 program
   .name("worklift")
-  .description("Modern build tool with TypeScript DSL")
+  .description("Modern build tool with YAML DSL")
   .version("0.1.0");
 
 // Main command: execute targets
 program
   .argument("[targets...]", "targets to execute (e.g., build, app:test)", [])
-  .option("-f, --file <path>", "build file path", "build.ts")
+  .option("-f, --file <path>", "build file path", "build.yaml")
   .option(
     "-l, --log-level <level>",
     "log level (error|warn|info|debug)",
@@ -32,7 +32,7 @@ program
 program
   .command("list")
   .description("list all projects and targets")
-  .option("-f, --file <path>", "build file path", "build.ts")
+  .option("-f, --file <path>", "build file path", "build.yaml")
   .action(async (options) => {
     await listCommand(options);
   });

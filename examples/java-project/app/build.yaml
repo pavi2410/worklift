@@ -1,0 +1,36 @@
+projects:
+  app:
+    targets:
+      compile:
+        dependsOn:
+          - lib:jar
+        tasks:
+          - javac:
+              sources: src/com/example/app/Main.java
+              destination: build/classes
+              classpath:
+                - ../lib/build/string-utils.jar
+
+      jar:
+        dependsOn:
+          - compile
+        tasks:
+          - jar:
+              from: build/classes
+              to: build/demo-app.jar
+              mainClass: com.example.app.Main
+
+      run:
+        dependsOn:
+          - compile
+        tasks:
+          - java:
+              mainClass: com.example.app.Main
+              classpath:
+                - build/classes
+                - ../lib/build/string-utils.jar
+
+      clean:
+        clean:
+          - compile
+          - jar

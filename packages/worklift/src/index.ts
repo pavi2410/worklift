@@ -1,5 +1,5 @@
 /**
- * Worklift - A modern build tool with TypeScript DSL
+ * Worklift - A modern build tool with YAML DSL
  * An alternative to Apache Ant
  */
 

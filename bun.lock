@@ -18,6 +18,8 @@
       },
       "dependencies": {
         "@worklift/core": "workspace:*",
+        "@worklift/file-tasks": "workspace:*",
+        "@worklift/java-tasks": "workspace:*",
         "commander": "^14.0.2",
       },
       "devDependencies": {
