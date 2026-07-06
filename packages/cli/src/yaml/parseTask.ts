@@ -21,8 +21,14 @@ import {
   WarTask,
 } from "@worklift/java-tasks";
 import { MAVEN_PRESETS, MAVEN_REPOS } from "./presets.ts";
-import type { JavaDefaults } from "./parseJavaDefaults.ts";
-import { parseClasspath, resolveArtifactRef } from "./parseClasspath.ts";
+import type { TaskParseContext } from "./taskParseContext.ts";
+import {
+  parseClasspath,
+  resolveArtifactRef,
+} from "./parseClasspath.ts";
+import {
+  type ResolvedVariant,
+} from "./parseVariants.ts";
 import { isFileSetDef, parseFileSet } from "./parseFileSet.ts";
 import type { YamlTaskDef } from "./types.ts";
 
@@ -47,9 +53,7 @@ const TASK_TYPES = new Set([
 
 export function parseTask(
   def: YamlTaskDef,
-  artifacts: Map<string, Artifact<string[]>>,
-  projectName: string,
-  javaDefaults?: JavaDefaults
+  ctx: TaskParseContext
 ): Task {
   const keys = Object.keys(def);
   if (keys.length !== 1) {
@@ -110,45 +114,152 @@ export function parseTask(
         env: optionalRecord(config, "env"),
       });
     case "javac":
-      return JavacTask.of({
-        sources: config.sources as string | string[],
-        destination: requireString(config, "destination"),
-        classpath: parseClasspath(config.classpath, artifacts, projectName),
-        sourceVersion:
-          optionalString(config, "sourceVersion") ?? javaDefaults?.sourceVersion,
-        targetVersion:
-          optionalString(config, "targetVersion") ?? javaDefaults?.targetVersion,
-        encoding: optionalString(config, "encoding") ?? javaDefaults?.encoding,
-      });
+      return parseJavacTask(config, ctx);
     case "jar":
       return parseJarTask(config);
     case "java":
       return JavaTask.of({
         mainClass: optionalString(config, "mainClass"),
         jar: optionalString(config, "jar"),
-        classpath: parseClasspath(config.classpath, artifacts, projectName),
+        classpath: parseClasspath(
+          config.classpath,
+          ctx.artifacts,
+          ctx.projectName,
+          ctx.variants
+        ),
         jvmArgs: optionalStringArray(config, "jvmArgs"),
         args: optionalStringArray(config, "args"),
       });
     case "junit":
-      return JUnitTask.of({
-        testClasses: requireString(config, "testClasses"),
-        classpath: parseClasspath(config.classpath, artifacts, projectName),
-        includes: optionalStringArray(config, "includes"),
-        excludes: optionalStringArray(config, "excludes"),
-        reports: optionalString(config, "reports"),
-        fork: optionalBoolean(config, "fork"),
-        jvmArgs: optionalStringArray(config, "jvmArgs"),
-        haltOnFailure: optionalBoolean(config, "haltOnFailure"),
-        version: config.version as 4 | 5 | undefined,
-      });
+      return parseJUnitTask(config, ctx);
     case "maven-dep":
-      return parseMavenDepTask(config, artifacts);
+      return parseMavenDepTask(config, ctx.artifacts);
     case "war":
       return parseWarTask(config);
     default:
       throw new Error(`Unhandled task type: ${type}`);
   }
+}
+
+function parseJavacTask(config: unknown, ctx: TaskParseContext): JavacTask {
+  if (typeof config === "string") {
+    return javacFromVariant(requireVariant(config, ctx.variants), ctx, {});
+  }
+
+  if (typeof config !== "object" || config === null || Array.isArray(config)) {
+    throw new Error("javac config must be a variant name or object");
+  }
+
+  const obj = config as Record<string, unknown>;
+  const variantName = optionalString(obj, "variant");
+  const variant = variantName
+    ? requireVariant(variantName, ctx.variants)
+    : undefined;
+
+  return javacFromVariant(variant, ctx, obj);
+}
+
+function javacFromVariant(
+  variant: ResolvedVariant | undefined,
+  ctx: TaskParseContext,
+  overrides: Record<string, unknown>
+): JavacTask {
+  const sources =
+    overrides.sources ?? (variant ? variant.sources : undefined);
+  const destination =
+    optionalString(overrides, "destination") ??
+    (variant ? variant.output : undefined);
+  const classpathSource =
+    overrides.classpath ?? variant?.classpath;
+
+  if (!sources) {
+    throw new Error("javac: 'sources' is required");
+  }
+  if (!destination) {
+    throw new Error("javac: 'destination' is required");
+  }
+
+  return JavacTask.of({
+    sources: sources as string | string[],
+    destination,
+    classpath: parseClasspath(
+      classpathSource,
+      ctx.artifacts,
+      ctx.projectName,
+      ctx.variants
+    ),
+    sourceVersion:
+      optionalString(overrides, "sourceVersion") ?? ctx.jvm?.sourceVersion,
+    targetVersion:
+      optionalString(overrides, "targetVersion") ?? ctx.jvm?.targetVersion,
+    encoding: optionalString(overrides, "encoding") ?? ctx.jvm?.encoding,
+  });
+}
+
+function parseJUnitTask(config: unknown, ctx: TaskParseContext): JUnitTask {
+  if (typeof config === "string") {
+    return junitFromVariant(requireVariant(config, ctx.variants), ctx, {});
+  }
+
+  if (typeof config !== "object" || config === null || Array.isArray(config)) {
+    throw new Error("junit config must be a variant name or object");
+  }
+
+  const obj = config as Record<string, unknown>;
+  const testClassesRef = requireString(obj, "testClasses");
+  const variant = ctx.variants.get(testClassesRef);
+  const testClasses = variant?.output ?? testClassesRef;
+
+  return JUnitTask.of({
+    testClasses,
+    classpath: parseClasspath(
+      obj.classpath ?? variant?.classpath,
+      ctx.artifacts,
+      ctx.projectName,
+      ctx.variants
+    ),
+    includes: optionalStringArray(obj, "includes"),
+    excludes: optionalStringArray(obj, "excludes"),
+    reports: optionalString(obj, "reports"),
+    fork: optionalBoolean(obj, "fork"),
+    jvmArgs: optionalStringArray(obj, "jvmArgs"),
+    haltOnFailure: optionalBoolean(obj, "haltOnFailure"),
+    version: obj.version as 4 | 5 | undefined,
+  });
+}
+
+function junitFromVariant(
+  variant: ResolvedVariant,
+  ctx: TaskParseContext,
+  overrides: Record<string, unknown>
+): JUnitTask {
+  return JUnitTask.of({
+    testClasses: variant.output,
+    classpath: parseClasspath(
+      overrides.classpath ?? variant.classpath,
+      ctx.artifacts,
+      ctx.projectName,
+      ctx.variants
+    ),
+    includes: optionalStringArray(overrides, "includes"),
+    excludes: optionalStringArray(overrides, "excludes"),
+    reports: optionalString(overrides, "reports"),
+    fork: optionalBoolean(overrides, "fork"),
+    jvmArgs: optionalStringArray(overrides, "jvmArgs"),
+    haltOnFailure: optionalBoolean(overrides, "haltOnFailure"),
+    version: overrides.version as 4 | 5 | undefined,
+  });
+}
+
+function requireVariant(
+  name: string,
+  variants: Map<string, ResolvedVariant>
+): ResolvedVariant {
+  const variant = variants.get(name);
+  if (!variant) {
+    throw new Error(`Unknown variant: ${name}`);
+  }
+  return variant;
 }
 
 function parseCopyTask(config: Record<string, unknown>): CopyTask {

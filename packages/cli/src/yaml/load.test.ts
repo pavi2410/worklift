@@ -212,11 +212,11 @@ targets:
     expect(typeof compile.dependencies[0]).toBe("object");
   });
 
-  test("applies java defaults to javac tasks", async () => {
+  test("applies jvm defaults to javac tasks", async () => {
     const file = writeBuild(
       "app/build.yaml",
       `
-java:
+jvm:
   source: "11"
   target: "17"
 targets:
@@ -236,6 +236,35 @@ targets:
     };
     expect(task.sourceVer).toBe("11");
     expect(task.targetVer).toBe("17");
+  });
+
+  test("parses javac variant shorthand", async () => {
+    const file = writeBuild(
+      "app/build.yaml",
+      `
+jvm:
+  layout: maven
+  source: "11"
+  target: "11"
+variants:
+  main: {}
+targets:
+  compile:
+    - javac: main
+`
+    );
+
+    await loadYamlBuild(file);
+
+    const compile = getProjectRegistry().get("app")!.targets.get("compile")!;
+    const task = compile.taskList[0] as unknown as {
+      sourceVer?: string;
+      inputs?: string;
+      outputs?: string;
+    };
+    expect(task.inputs).toBe("src/main/java/**/*.java");
+    expect(task.outputs).toBe("build/classes");
+    expect(task.sourceVer).toBe("11");
   });
 
   test("rejects unknown dependency references", async () => {

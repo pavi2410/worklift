@@ -1,9 +1,20 @@
 artifacts:
   appDependencies: {}
 
-java:
+jvm:
+  layout: maven
   source: "11"
   target: "11"
+
+variants:
+  main:
+    deps: [$appDependencies, string-utils:jar]
+  test:
+    deps:
+      - $junitClasspath
+      - $appDependencies
+      - string-utils:jar
+      - main
 
 dependencies:
   compile-tests: [compile, string-utils:resolve-deps]
@@ -22,31 +33,14 @@ targets:
         into: $appDependencies
 
   compile:
-    - javac:
-        sources: src/main/java/com/example/app/Application.java
-        destination: build/classes
-        classpath:
-          - $appDependencies
-          - string-utils:jar
+    - javac: main
 
   compile-tests:
-    - javac:
-        sources: src/test/java/com/example/app/ApplicationTest.java
-        destination: build/test-classes
-        classpath:
-          - $junitClasspath
-          - $appDependencies
-          - string-utils:jar
-          - compile
+    - javac: test
 
   test:
     - junit:
-        testClasses: build/test-classes
-        classpath:
-          - $junitClasspath
-          - $appDependencies
-          - string-utils:jar
-          - compile
+        testClasses: test
         reports: build/reports
         version: 5
 
@@ -62,4 +56,4 @@ targets:
         classpath:
           - $appDependencies
           - string-utils:jar
-          - compile
+          - main

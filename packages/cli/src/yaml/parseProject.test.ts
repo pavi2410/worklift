@@ -26,18 +26,24 @@ describe("parseProjectFromDoc", () => {
     const result = parseProjectFromDoc(
       {
         name: "app",
-        java: { source: "11", target: "11" },
+        jvm: { source: "11", target: "11", layout: "maven" },
+        variants: { main: {} },
         artifacts: { deps: {} },
         targets: { build: { tasks: [] } },
       },
       "/proj/build.yaml"
     );
     expect(result?.name).toBe("app");
-    expect(result?.java).toEqual({
+    expect(result?.jvm).toEqual({
       sourceVersion: "11",
       targetVersion: "11",
       encoding: undefined,
+      layout: "maven",
+      jdk: undefined,
     });
+    expect(result?.variants?.get("main")?.sources).toBe(
+      "src/main/java/**/*.java"
+    );
     expect(result?.targets?.build).toBeDefined();
     expect(result?.artifacts?.deps).toBeDefined();
   });

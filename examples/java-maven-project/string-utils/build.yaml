@@ -1,9 +1,15 @@
 artifacts:
   junitClasspath: {}
 
-java:
+jvm:
+  layout: maven
   source: "11"
   target: "11"
+
+variants:
+  main: {}
+  test:
+    deps: [main, $junitClasspath]
 
 dependencies:
   compile-tests: [compile]
@@ -20,24 +26,14 @@ targets:
         into: $junitClasspath
 
   compile:
-    - javac:
-        sources: src/main/java/com/example/utils/StringUtils.java
-        destination: build/classes
+    - javac: main
 
   compile-tests:
-    - javac:
-        sources: src/test/java/com/example/utils/StringUtilsTest.java
-        destination: build/test-classes
-        classpath:
-          - $junitClasspath
-          - build/classes
+    - javac: test
 
   test:
     - junit:
-        testClasses: build/test-classes
-        classpath:
-          - $junitClasspath
-          - build/classes
+        testClasses: test
         reports: build/reports
         version: 5
 

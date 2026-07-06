@@ -2,13 +2,15 @@ import type { Artifact } from "@worklift/core";
 import type { FileSet } from "@worklift/core";
 import { getProjectRegistry, isTarget, type Target } from "@worklift/core";
 import { isFileSetDef, parseFileSet } from "./parseFileSet.ts";
+import type { ResolvedVariant } from "./parseVariants.ts";
 
 type ClasspathElement = string | string[] | Artifact<string[]> | FileSet | Target;
 
 export function parseClasspath(
   value: unknown,
   artifacts: Map<string, Artifact<string[]>>,
-  projectName: string
+  projectName: string,
+  variants?: Map<string, ResolvedVariant>
 ): ClasspathElement[] {
   if (!value) {
     return [];
@@ -16,14 +18,15 @@ export function parseClasspath(
 
   const items = Array.isArray(value) ? value : [value];
   return items.map((item) =>
-    resolveClasspathElement(item, artifacts, projectName)
+    resolveClasspathElement(item, artifacts, projectName, variants)
   );
 }
 
 function resolveClasspathElement(
   item: unknown,
   artifacts: Map<string, Artifact<string[]>>,
-  projectName: string
+  projectName: string,
+  variants?: Map<string, ResolvedVariant>
 ): ClasspathElement {
   if (typeof item === "string") {
     if (item.startsWith("$")) {
@@ -38,6 +41,10 @@ function resolveClasspathElement(
     const target = resolveTargetClasspathRef(item, projectName);
     if (target) {
       return target;
+    }
+
+    if (variants?.has(item)) {
+      return variants.get(item)!.output;
     }
 
     if (item.includes(":")) {

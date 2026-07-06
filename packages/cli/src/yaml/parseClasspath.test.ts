@@ -1,6 +1,7 @@
 import { describe, test, expect, beforeEach } from "bun:test";
 import { getProjectRegistry, project, isTarget } from "@worklift/core";
 import { JarTask } from "@worklift/java-tasks";
+import { resolveVariants } from "./parseVariants.ts";
 import {
   parseClasspath,
   resolveTargetClasspathRef,
@@ -37,6 +38,12 @@ describe("parseClasspath", () => {
   test("treats unknown single-segment names as paths", () => {
     expect(resolveTargetClasspathRef("build/classes", "app")).toBeUndefined();
     const refs = parseClasspath(["build/classes"], new Map(), "app");
+    expect(refs[0]).toBe("build/classes");
+  });
+
+  test("resolves variant references on classpath", () => {
+    const variants = resolveVariants({ layout: "maven" }, { main: {}, test: {} });
+    const refs = parseClasspath(["main"], new Map(), "app", variants);
     expect(refs[0]).toBe("build/classes");
   });
 

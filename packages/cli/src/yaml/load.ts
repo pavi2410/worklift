@@ -104,12 +104,17 @@ export async function loadYamlBuild(
 
   for (const [targetName, targetDef] of Object.entries(targetDefs)) {
     proj.targets.delete(targetName);
+    const ctx = {
+      artifacts,
+      projectName: projectDef.name,
+      jvm: projectDef.jvm,
+      variants: projectDef.variants ?? new Map(),
+    };
+
     const tasks = parseTargetTasks(
       targetDef,
       targetName,
-      artifacts,
-      projectDef.name,
-      projectDef.java
+      ctx
     );
     const target = proj.target({ name: targetName, tasks });
 

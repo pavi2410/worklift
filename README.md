@@ -78,18 +78,22 @@ Instead of XML like Apache Ant:
 You can write YAML:
 
 ```yaml
-java:
+jvm:
+  layout: maven
   source: "11"
   target: "11"
 
+variants:
+  main: {}
+  test:
+    deps: [main, $junitClasspath]
+
 targets:
-  build:
-    - javac:
-        sources: src/**/*.java
-        destination: build/classes
+  compile:
+    - javac: main
 ```
 
-`java:` sets defaults for `javac` tasks (`source`/`target` or `sourceVersion`/`targetVersion`, plus `encoding`). Per-task values override the project defaults.
+`jvm:` sets JVM defaults (`source`/`target`, `layout`, `jdk`). `variants:` bundles sources, output, and deps for `javac: main` / `junit: test` shorthand. `java:` is an alias for `jvm:`.
 
 Each build file defines **one project**. The project name defaults to the containing directory for `build.yaml`, or the filename otherwise. Override with `name:`:
 

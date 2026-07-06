@@ -1,5 +1,6 @@
 import { basename, dirname } from "path";
-import { parseJavaDefaults } from "./parseJavaDefaults.ts";
+import { parseJvmConfig } from "./parseJvmConfig.ts";
+import { resolveVariants } from "./parseVariants.ts";
 import type { ParsedProjectDef } from "./types.ts";
 
 /**
@@ -14,10 +15,13 @@ export function parseProjectFromDoc(
     return null;
   }
 
+  const jvm = parseJvmConfig(doc);
+
   return {
     name: resolveProjectName(doc, filePath),
     baseDir: doc.baseDir as string | undefined,
-    java: parseJavaDefaults(doc.java),
+    jvm,
+    variants: resolveVariants(jvm, doc.variants),
     artifacts: doc.artifacts as ParsedProjectDef["artifacts"],
     dependencies: doc.dependencies as ParsedProjectDef["dependencies"],
     clean: doc.clean as ParsedProjectDef["clean"],
